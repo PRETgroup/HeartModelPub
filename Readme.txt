@@ -56,15 +56,7 @@ Heart_N3.xlsx, the parameters have been adjusted to fit TT Endo and Courtemanche
 
 4.Usage of models and scripts
 	4.0	Add all the library files to the search path for the current MATLAB® session.
-			E.g.,
-			% It sets the required paths in the environment. 
-			cd('D:\HeartModelP\Lib');
-			path_var=pwd;
-			addpath(path_var);
-			cd ..;
-			path_var=pwd;
-			addpath(path_var);
-
+		
 	4.1	Build a new heart model
 		Refer to PreBuild.m. 
 
@@ -73,31 +65,27 @@ Heart_N3.xlsx, the parameters have been adjusted to fit TT Endo and Courtemanche
 			
 		(2).	Load all the data into the workspace of Matlab for simulation
 			E.g.,
-			% contains all configurations of heart model
-			filename='D:/HeartModelP/N3Cfg.mat'; 
-			% contains all parameters of heart model, which will be used for initialization
-			datafile='D:/HeartModelP/N3Data.mat'; 
-			% Contains all the range of new parameters for run-time update
-			updatePara='D:/HeartModelP/TBME2019/parasAVNRT.mat';
+			%Prepare the parameters
+			% contains all configurations of heart model, which will be used to build a new heart model
+			filename='N3Cfg.mat'; 
+			% contains all parameters of heart model, which will be used for simulation
+			datafile='N3Data.mat'; 
 			load(filename);
 			load(datafile);
-			load(updatePara);
 
 		(3).	Run the model
 			1)	With GUI
 			----------for GUI operation-------
-			
 			% Specify the model name
 			modelName='CLS';
 			% Specify the model path
-			mdl=sprintf('D:/HeartModelP/TBME2019/%s',modelName);
+			mdl=[path_var,filesep,modelName];
 			% Specify the data save path
-			savepath='D:\HeartModelP\TBME2019\Cells.mat';
+			savepath=[path_var,filesep 'Cells.mat'];
+			% In the model, there should be a S-function to save data to the same structure of the GUI.
 			Heart_GUI(mdl,modelName,filename,savepath); % In the model, there should be a S-function to save data to the same structure of the GUI.
 			% Via the GUI
 			Specify the simulation time and Press Start in the Operations panel of the GUI
-			All the data are saved to D:/HeartModelP/TBME2019/Cells.mat.
-
 			-----------end-------------
 
 			2)	Without GUI
