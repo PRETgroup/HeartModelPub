@@ -1,0 +1,10 @@
+AVNRT:
+% SA BCL=814; CS BCL=1194 enabled (para48=0); path 10 backward enabled (para7=1.1); ppR5
+cfg=[814,1194,2,0,0.100000000000000,0.250000000000000,278,0.0146200000000000,0.00872000000000000,2300,2,1,0.100000000000000,0.250000000000000,1.100000000000000,0.0700000000000000,0.0700000000000000,0.0700000000000000,0.0700000000000000];
+
+
+Multi:Bradycardia+AV block+premature ventricular complex (PVC), RBBB (slow velocity):
+% SA BCL=1400; the automaticity of Node 24 (RBB) enabled (para48=0); path 10 backward enabled (para7=1.0); Path 15 cv=0.04, path 27 cv=0.4; 
+
+Multi2:Bradycardia+AV block+premature ventricular complex (PVC), RBBB (complete blockage, i.e.,cv=0):
+% SA BCL=1400; the automaticity of Node 24 (RBB) enabled (para48=0); path 10 backward enabled (para7=1.0); Path 15 cv=0.04, path 27 cv=0;
