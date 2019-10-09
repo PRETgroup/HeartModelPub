@@ -1,4 +1,6 @@
 function Heart_GUI(mdl,modelName,filename,savepath)
+% Copyright 2019 Weiwei Ai.
+% This program is released under license GPL version 3.
 close all
 %% GUI
 global ConfigGUI
@@ -16,7 +18,7 @@ open_system(ConfigGUI.mdl);
 %% Save some of the models original info that this UI may change (and needs to change back again when the simulation stops)
 ConfigGUI.originalStopTime = get_param(ConfigGUI.modelName,'Stoptime');
 ConfigGUI.originalMode =  get_param(ConfigGUI.modelName,'SimulationMode');
-ConfigGUI.simtime=1000;
+ConfigGUI.simtime=2000;
 %% Get the display
 pos = get(0, 'screensize'); %get the screensize
 W=pos(3);
@@ -116,7 +118,7 @@ ConfigGUI.hop = uipanel('Parent',ConfigGUI.Handle,...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
     'HandleVisibility','callback',...
     'Tag','tunePanel');
-strings = {'Start','Pause','Stop','1000'};
+strings = {'Start','Pause','Stop','2000'};
 positions = [0.6 0.4 0.2 0];
 tags = {'startpb','pausepb','stoppb','simtime'};
 callbacks = {@localStartPressed, @localPausePressed, @localStopPressed,@localSetTime};
@@ -142,7 +144,7 @@ ConfigGUI.hplay = uipanel('Parent',ConfigGUI.Handle,...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
     'HandleVisibility','callback',...
     'Tag','tunePanel');
-strings = {'Load','Start','Pause','0','1000'};
+strings = {'Load','Start','Pause','0','2000'};
 positions = [0.8 0.6 0.4 0.2 0];
 style={'pushbutton','pushbutton','pushbutton','edit','edit'};
 tags = {'loadpb','playstart','playpause','playst','played'};

@@ -1,3 +1,6 @@
+% Copyright 2019 Weiwei Ai.
+% This program is released under license GPL version 3.
+%%
 %Before run the script, please load Cells.mat first
 load('N3Cfg.mat')
 s=[4 8 9 10 11];% Specify the node number you want to print out

@@ -1,4 +1,6 @@
 function [Node,Node_name,Node_pos,Path,Path_name,Probe,Probe_name,Probe_pos,cfgports]=PreCfgfcn(filexls,Noderange,Node_P_range,Pathrange, Path_P_range, Proberange,filename,datafile)
+% Copyright 2019 Weiwei Ai.
+% This program is released under license GPL version 3.
 %% Read paras from xlsx
 % Read Node cfg data
 [Node,Node_name,Node_Raw] = xlsread(filexls, 'Node',Noderange);

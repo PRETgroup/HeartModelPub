@@ -1,5 +1,7 @@
 function [sys,x0,str,ts] = SaveTrace_sfcn(t,x,u,flag,Ts)
-
+% Copyright 2019 Weiwei Ai.
+% This program is released under license GPL version 3.
+%%
 % t, current time; x state vector; u input vector; flag Integer value that
 % indicates the task to be performed by the S-function;
 % sys, a generic return argument. The values returned depend on the flag value. For example, for flag = 3, sys contains the S-function outputs.

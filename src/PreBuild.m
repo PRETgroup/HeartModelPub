@@ -1,3 +1,6 @@
+% Copyright 2019 Weiwei Ai.
+% This program is released under license GPL version 3.
+%%
 %%Read excel data; If 'N3Cfg.mat' and 'N3Data.mat' already exist, this part
 %%can be skipped.
 filexls='Heart_N3'; % The excel file name

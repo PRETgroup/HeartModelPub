@@ -1,6 +1,7 @@
-
+% Copyright 2019 Weiwei Ai.
+% This program is released under license GPL version 3.
+%%
 load('AV_trace_2.mat');
-
 figure;
 set(0, 'DefaultAxesColorOrder', [0.0 0.0 0.0]); %black
 
