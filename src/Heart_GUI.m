@@ -78,6 +78,7 @@ p(3)=p(3)*1.2;
 %set(ConfigGUI.S,'Ylim',[-1.5 1.5]);
 ConfigGUI.R=subplot(6,2,12,'Parent',ConfigGUI.Handle,'NextPlot','add','Box','on');
 ylabel(ConfigGUI.R,'AR/VR');
+xlabel(ConfigGUI.R,'Time (ms)');
 p = get(ConfigGUI.R,'position');
 p(3)=p(3)*1.2;
 %set(ConfigGUI.R,'Ylim',[-1.5 1.5]);
