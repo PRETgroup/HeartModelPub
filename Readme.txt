@@ -1,13 +1,14 @@
 # HeartModelPub
 
-This project includes pacemaker cell models [1], cardiomyocytes [2], the cardiac conduction system [3] and EGM generation [4], which are implemented in Matlab/Simulink. For C code generation and implementation using Piha, please refer to [5][6].
+This project includes pacemaker cell models [1], cardiomyocytes [2,3], the cardiac conduction system [3] and EGM generation [4], which are implemented in Matlab/Simulink. We have demonstrated the in-silico validation of a DDD mode pacemaker with the virtual physiological heart model in the closed-loop [5]. For C code generation and implementation using Piha, please refer to [6][7].
 The complete original models were presented in the following papers:
 	[1] Ai, Weiwei, et al. "A parametric computational model of the action potential of pacemaker cells." IEEE Transactions on Biomedical Engineering 65.1 (2017): 123-130.
 	[2] Yip, Eugene, et al. "Towards the emulation of the cardiac conduction system for pacemaker validation." ACM Transactions on Cyber-Physical Systems 2.4 (2018): 32.
-	[3] Ai, Weiwei, et al. "Cardiac Electrical Modeling for Closed-loop Validation of Implantable Devices." IEEE Transactions on Biomedical Engineering (2019).
+	[3] Ai, Weiwei, et al. "Cardiac electrical modeling for closed-loop validation of implantable devices." IEEE Transactions on Biomedical Engineering 67.2 (2019): 536-544.
 	[4] Ai, Weiwei, et al. "An intracardiac electrogram model to bridge virtual hearts and implantable cardiac devices." 2017 39th Annual International Conference of the IEEE Engineering in Medicine and Biology Society (EMBC). IEEE, 2017.
-	[5] Allen, Nathan, et al. "Modular code generation for emulating the electrical conduction system of the human heart." Proceedings of the 2016 Conference on Design, Automation & Test in Europe. EDA Consortium, 2016.
-	[6] Malik, Avinash, et al. "Modular compilation of hybrid systems for emulation and large scale simulation." ACM Transactions on Embedded Computing Systems (TECS) 16.5s (2017): 118.
+        [5] Ai, Weiwei, et al. "Closing the loop: Validation of implantable cardiac devices with computational heart models." IEEE journal of biomedical and health informatics 24.6 (2019): 1579-1588.
+	[6] Allen, Nathan, et al. "Modular code generation for emulating the electrical conduction system of the human heart." Proceedings of the 2016 Conference on Design, Automation & Test in Europe. EDA Consortium, 2016.
+	[7] Malik, Avinash, et al. "Modular compilation of hybrid systems for emulation and large scale simulation." ACM Transactions on Embedded Computing Systems (TECS) 16.5s (2017): 118.
 
 When using these models, please cite the original publications.
 
@@ -18,7 +19,7 @@ This repository provides running examples showing:
 
 ## Getting Started
 
-	* To set up, add all the library files to the search path for the current MATLAB® session by running the following in the Matlab command window:
+	* To set up, add all the library files to the search path for the current MATLABÂ® session by running the following in the Matlab command window:
 	  >> setup_Heart
 
 	* Run model simulations:
@@ -94,10 +95,10 @@ This repository provides running examples showing:
    	  -PreBuild.m, a demo showing automatically building a heart model.
    	  
    	  -PreCfgfcn.m, Read parameters from the excel file given filenames and data range to;
-   	 	•	Generate configuration data for heart model building;
-   	 	•	Create a lookup table for parameters update;
-   	 	•	Cfgports: input configuration of the demux connecting with the parameter input port;
-   	 	•	Cfgdata: All the parameters;
+   	 	â€¢	Generate configuration data for heart model building;
+   	 	â€¢	Create a lookup table for parameters update;
+   	 	â€¢	Cfgports: input configuration of the demux connecting with the parameter input port;
+   	 	â€¢	Cfgdata: All the parameters;
    	 	
    	  -Buildmodel_fcn.m, automatically build a heart model provided that the parameters and the connection relations of cells and paths are available (node names, types and path names); Need to specify the library for the components.	 
    	  -Heart_GUI.m, generate a UI and link to the model.	 
@@ -106,14 +107,14 @@ This repository provides running examples showing:
    	  -genpp.m, generate new parameters.
       
 ## Acknowledgment
-    1. The cardiomyocytes model [2] is based on the work [7] and the initial Simulink implementaion is from the Oxford group [8].
-    2. The initial topology of the cardiac conduction system [3] is from the work [9].
-    3. The DDD pacemaker is modified based on a published model [10].
+    1. The cardiomyocytes model [2] is based on the work [8] and the initial Simulink implementaion is from the Oxford group [9].
+    2. The initial topology of the cardiac conduction system [3] is from the work [10].
+    3. The DDD pacemaker is modified based on a published model [11].
 
-    [7] Ye, Pei, et al. "Modelling excitable cells using cycle-linear hybrid automata." IET systems biology 2.1 (2008): 24-32.
-    [8] Chen, Taolue, et al. "Quantitative verification of implantable cardiac pacemakers over hybrid heart models." Information and Computation 236 (2014): 87-101.
-    [9] Jiang, Zhihao, Miroslav Pajic, and Rahul Mangharam. "Cyber–physical modeling of implantable cardiac medical devices." Proceedings of the IEEE 100.1 (2011): 122-137.
-    [10] Pajic, Miroslav, et al. "From verification to implementation: A model translation tool and a pacemaker case study." 2012 IEEE 18th Real Time and Embedded Technology and Applications Symposium. IEEE, 2012.
+    [8] Ye, Pei, et al. "Modelling excitable cells using cycle-linear hybrid automata." IET systems biology 2.1 (2008): 24-32.
+    [9] Chen, Taolue, et al. "Quantitative verification of implantable cardiac pacemakers over hybrid heart models." Information and Computation 236 (2014): 87-101.
+    [10] Jiang, Zhihao, Miroslav Pajic, and Rahul Mangharam. "Cyberâ€“physical modeling of implantable cardiac medical devices." Proceedings of the IEEE 100.1 (2011): 122-137.
+    [11] Pajic, Miroslav, et al. "From verification to implementation: A model translation tool and a pacemaker case study." 2012 IEEE 18th Real Time and Embedded Technology and Applications Symposium. IEEE, 2012.
 
 ## Need-to-know
 	* In the path model, only the voltage during q3 contribute to the activation of its neighbouring cells, which is an approximation.
