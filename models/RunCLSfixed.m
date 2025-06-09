@@ -1,35 +1,65 @@
 % Copyright 2019 Weiwei Ai.
 % This program is released under license GPL version 3.
 %%
-clear;
+clear all;
 %Prepare the parameters
 % contains all configurations of heart model
-filename='N3Cfg.mat'; 
+filename='N3Cfg.mat'; % _second.mat';
 % contains all parameters of heart model
-datafile='N3Data.mat'; 
+datafile='N3Data.mat'; % _second.mat'; 
 load(filename);
 load(datafile);
 path_var=pwd;
-% Contains all the range of new parameters for run-time update
-updatePara='parasMulti.mat';
+% Opening Main GUI which determines whether to edit model network
+% structure, parameters, and add pacemaker
+global outputs 
+outputs = main_settings();
+Heart_GUI_preset(outputs);
+switch outputs.param
+    case 'Normal'        
+        updatePara='parasNormal.mat';
+    case 'parasMulti' 
+        updatePara='parasMulti.mat';
+    case 'parasMulti2'
+        updatePara='parasMulti2.mat';
+    case 'parasMulti3'
+        updatePara='parasMulti3.mat';
+    otherwise 
+        updatePara='parasNormal.mat';
+end
 load(updatePara);
-%% Parameter settings
-% parasMulti:
-% Bradycardia+AV block+premature ventricular complex (PVC), RBBB (slow velocity):
-% % SA BCL=1400; the automaticity of Node 24 (RBB) enabled (para48=0); path 10 backward enabled (para7=1.0); Path 15 cv=0.04, path 27 cv=0.4; 
-% parasMulti2: PVC introduces PMT
-% Bradycardia+AV block+premature ventricular complex (PVC), RBBB (complete blockage, i.e.,cv=0):
-% % SA BCL=1400; the automaticity of Node 24 (RBB) enabled (para48=0); path 10 backward enabled (para7=1.0); Path 15 cv=0.04, path 27 cv=0;
-% parasMulti3: extra VP introduces AVNRT
-% % SA BCL=814; CS BCL=1194 enabled (para48=0); path 10 backward enabled (para7=0.8); ppR5
-% cfg=[814,1194,2,0,0.100000000000000,0.250000000000000,278,0.0146200000000000,0.00872000000000000,2300,2,1,0.100000000000000,0.250000000000000,1.100000000000000,0.0700000000000000,0.0700000000000000,0.0700000000000000,0.0700000000000000];
-%%parasNormal Normal but slight AV delay compared to device AVI.
-%% Run the GUI
 % Specify the model name
 modelName='CLSfixed';
+if ~contains('models',path_var)
+    path_var = [path_var, filesep 'models'];
+end
 % Specify the model path
 mdl=[path_var,filesep, modelName];
 % Specify the data save path
 savepath=[path_var,filesep 'Cells.mat'];
+% Extract the node classification data from the xlsx file
+[~,~,nodes_raw]=xlsread('Heart_N3_second.xlsx','Node_second');
+[~,~,path_raw]=xlsread('Heart_N3_second.xlsx','Path_second');
+[~,~,probes_raw]=xlsread('Heart_N3_second.xlsx','Probe');
+
+% Edit the network model
+if outputs.editmodel
+    global node_atts
+    global path_atts
+    global node_atts_copy
+    global params
+    global path_atts_copy
+    temp = nodes_raw(:,2:end);
+    temp(:,end-2) = [];
+    assignin('base','node_atts',temp);
+    assignin('base','node_atts_copy',temp);
+    assignin('base','path_atts',path_raw);
+    assignin('base','path_atts_copy',path_raw);
+    %du = 90;
+    %pacing = 1500;
+    %cn0 = 5;
+    %cn1 = 5;
+    Heart_Editing_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw,params,node_atts,node_atts_copy,path_atts,path_atts_copy);
+end
 % In the model, there should be a S-function to save data to the same structure of the GUI.
-Heart_GUI(mdl,modelName,filename,savepath); 
+Heart_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw); 

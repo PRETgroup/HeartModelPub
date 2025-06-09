@@ -49,34 +49,32 @@ for i=1:size(Node,1) %iterates through node list
         Node_lookup(i,start:endn)=m1:m2; % para ax0 to para e
         Node_lookup(i,46:47)=m-1:m; % x,y
         Node_lookup(i,48:49)=[0 0];
-    else if strcmp(Node_name{i,2},'N')
-            Nodecfg1={'23'};
-            cfgdata_second=horzcat(cfgdata_second,Node(i,2:22),Node(i,46:47));
-            m1=m+1; % the first para
-            m=m+23; % the last one; (including x,y)
-            m2=m-2; %  the last para (excluding x,y)
-            start=2;
-            endn=22;       
-            Node_lookup(i,start:endn)=m1:m2; % para BCL to para r
-            Node_lookup(i,46:47)=m-1:m; % x,y
-            Node_lookup(i,48:49)=[0 0];
-        else if strcmp(Node_name{i,2},'NM')
-                Nodecfg1={'50'};
-                cfgdata_second=horzcat(cfgdata_second,Node(i,2:22),Node(i,46:47),Node(i,23:47),1,1);
-                m1=m+1; % the first para
-                m=m+48; % the last one; (including x,y)
-                m2=m-2; %  the last para (excluding x,y)
-                start=2;
-                endn=45;
-                Node_lookup(i,start:22)=m1:m1+20;
-                Node_lookup(i,23:endn)=m1+23:m2;
-                Node_lookup(i,46:47)=m-1:m;
-                m=m+2; % add dij, dji to control the path in between
-                Node_lookup(i,48:49)=m-1:m;
-            else
-                error('The dimension of Nodecfg does not match');
-            end
-        end
+    elseif strcmp(Node_name{i,2},'N')
+        Nodecfg1={'23'};
+        cfgdata_second=horzcat(cfgdata_second,Node(i,2:22),Node(i,46:47));
+        m1=m+1; % the first para
+        m=m+23; % the last one; (including x,y)
+        m2=m-2; %  the last para (excluding x,y)
+        start=2;
+        endn=22;       
+        Node_lookup(i,start:endn)=m1:m2; % para BCL to para r
+        Node_lookup(i,46:47)=m-1:m; % x,y
+        Node_lookup(i,48:49)=[0 0];
+    elseif strcmp(Node_name{i,2},'NM')
+        Nodecfg1={'50'};
+        cfgdata_second=horzcat(cfgdata_second,Node(i,2:22),Node(i,46:47),Node(i,23:47),1,1);
+        m1=m+1; % the first para
+        m=m+48; % the last one; (including x,y)
+        m2=m-2; %  the last para (excluding x,y)
+        start=2;
+        endn=45;
+        Node_lookup(i,start:22)=m1:m1+20;
+        Node_lookup(i,23:endn)=m1+23:m2;
+        Node_lookup(i,46:47)=m-1:m;
+        m=m+2; % add dij, dji to control the path in between
+        Node_lookup(i,48:49)=m-1:m;
+    else
+        error('The dimension of Nodecfg does not match');
     end
     
     if i>=2
@@ -113,22 +111,20 @@ for i=1:size(Probe,1) %iterate through probe list
         ARN=ARN+1;
         cfgdata_second=horzcat(cfgdata_second,Probe(i,2:4));
         
-    else if strcmp(Probe_name{i,1},'Atip')
-            ATN=ATN+1;
-            cfgdata_second=horzcat(cfgdata_second,Probe(i,2:4));
+    elseif strcmp(Probe_name{i,1},'Atip')
+        ATN=ATN+1;
+        cfgdata_second=horzcat(cfgdata_second,Probe(i,2:4));
             
-        else if strcmp(Probe_name{i,1},'Vring')
-                VRN=VRN+1;
-                cfgdata_second=horzcat(cfgdata_second,Probe(i,2:4));
+    elseif strcmp(Probe_name{i,1},'Vring')
+        VRN=VRN+1;
+        cfgdata_second=horzcat(cfgdata_second,Probe(i,2:4));
                 
-            else if strcmp(Probe_name{i,1},'Vtip')
-                    VTN=VTN+1;
-                    cfgdata_second=horzcat(cfgdata_second,Probe(i,2:4));                    
-                else
-                    error('Probe type error!');
-                end
-            end
-        end
+    elseif strcmp(Probe_name{i,1},'Vtip')
+        VTN=VTN+1;
+        cfgdata_second=horzcat(cfgdata_second,Probe(i,2:4));  
+        
+    else
+        error('Probe type error!');
     end
 end
 
