@@ -1,11 +1,13 @@
-function Heart_GUI(mdl,modelName,filename,savepath,raw_excel,raw_probes)
+function Heart_GUI(mdl,modelName,filename,savepath,raw_excel,raw_probes,timescale)
 % Copyright 2019 Weiwei Ai.
 % This program is released under license GPL version 3.
+% EGMs have a funny output - check root cause for order
 close all
 global nodes_name
 nodes_name = raw_excel(:,1:2);
 global probes_name
 probes_name = raw_probes(:,1);
+global timescale
 %% GUI
 global ConfigGUI
 % initialization
@@ -84,7 +86,7 @@ p(3)=p(3)*1.2;
 %set(ConfigGUI.S,'Ylim',[-1.5 1.5]);
 ConfigGUI.R=subplot(6,2,12,'Parent',ConfigGUI.Handle,'NextPlot','add','Box','on');
 ylabel(ConfigGUI.R,'AR/VR');
-xlabel(ConfigGUI.R,'Time (ms)');
+xlabel(ConfigGUI.R,sprintf('Time (%s)',timescale));
 p = get(ConfigGUI.R,'position');
 p(3)=p(3)*1.2;
 %set(ConfigGUI.R,'Ylim',[-1.5 1.5]);
@@ -371,6 +373,7 @@ drawnow update;
 h = findobj(ConfigGUI.hplay,'Tag','loadpb');
 switch get(h,'String')
     case 'Load'
+        disp('Loading happening')
         set(h,'String','Stop');
         [fname,fpath] = uigetfile('*.mat', 'Load VHM Model');
         dim=load([fpath fname]);

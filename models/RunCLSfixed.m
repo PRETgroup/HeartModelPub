@@ -2,13 +2,6 @@
 % This program is released under license GPL version 3.
 %%
 clear all;
-%Prepare the parameters
-% contains all configurations of heart model
-filename='N3Cfg.mat'; % _second.mat';
-% contains all parameters of heart model
-datafile='N3Data.mat'; % _second.mat'; 
-load(filename);
-load(datafile);
 path_var=pwd;
 % Opening Main GUI which determines whether to edit model network
 % structure, parameters, and add pacemaker
@@ -16,18 +9,41 @@ global outputs
 outputs = main_settings();
 Heart_GUI_preset(outputs);
 switch outputs.param
-    case 'Normal'        
+    case 'Normal'        %1
         updatePara='parasNormal.mat';
-    case 'parasMulti' 
+    case 'parasMulti' %2
         updatePara='parasMulti.mat';
-    case 'parasMulti2'
+    case 'parasMulti2' %3
         updatePara='parasMulti2.mat';
-    case 'parasMulti3'
+    case 'parasMulti3' %4
         updatePara='parasMulti3.mat';
     otherwise 
         updatePara='parasNormal.mat';
 end
 load(updatePara);
+global timescale
+%Prepare the parameters
+if outputs.units == 2 
+    filename='N3Cfg_second.mat'; 
+    datafile='N3Data_second.mat'; % Doesnt solve properly
+    pathsheet='Path_second';
+    nodesheet='Node_second'; 
+    assignin('base','solvertime',5);
+    assignin('base','stepsize',0.0005);
+    assignin('base','timescale','s');
+elseif outputs.units == 1
+    filename='N3Cfg.mat'; 
+    datafile='N3Data.mat'; 
+    pathsheet='Path'; 
+    nodesheet='Node'; 
+    assignin('base','solvertime',5000);
+    assignin('base','stepsize',0.1);
+    assignin('base','timescale','ms');
+end
+% contains all configurations of heart model
+load(filename);
+% contains all parameters of heart model
+load(datafile);
 % Specify the model name
 modelName='CLSfixed';
 if ~contains('models',path_var)
@@ -38,8 +54,8 @@ mdl=[path_var,filesep, modelName];
 % Specify the data save path
 savepath=[path_var,filesep 'Cells.mat'];
 % Extract the node classification data from the xlsx file
-[~,~,nodes_raw]=xlsread('Heart_N3_second.xlsx','Node_second');
-[~,~,path_raw]=xlsread('Heart_N3_second.xlsx','Path_second');
+[~,~,nodes_raw]=xlsread('Heart_N3_second.xlsx',nodesheet);
+[~,~,path_raw]=xlsread('Heart_N3_second.xlsx',pathsheet);
 [~,~,probes_raw]=xlsread('Heart_N3_second.xlsx','Probe');
 
 % Edit the network model
@@ -55,11 +71,7 @@ if outputs.editmodel
     assignin('base','node_atts_copy',temp);
     assignin('base','path_atts',path_raw);
     assignin('base','path_atts_copy',path_raw);
-    %du = 90;
-    %pacing = 1500;
-    %cn0 = 5;
-    %cn1 = 5;
-    Heart_Editing_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw,params,node_atts,node_atts_copy,path_atts,path_atts_copy);
+    Heart_Editing_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw,params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale);
 end
 % In the model, there should be a S-function to save data to the same structure of the GUI.
-Heart_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw); 
+Heart_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw,timescale); 

@@ -1,17 +1,16 @@
-function Heart_Editing_GUI(mdl,modelName,filename,savepath,raw_excel,raw_probes,model_params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale)
+function Heart_Editing_GUI(mdl,modelName,filename,savepath,raw_excel,raw_probes,raw_paths)
 % Copyright 2025 Ben Allen.
 % This program is released under license GPL version 3.
 close all
 global nodes_name
 nodes_name = raw_excel(:,1:2);
+global node_atts
+node_atts = raw_excel(:,2:end);
+node_atts(:,end-2) = [];
 global probes_name
 probes_name = raw_probes(:,1);
-global node_atts_copy
-global path_atts_copy
-global node_atts
 global path_atts
-global model_params
-global timescale
+path_atts = raw_paths;
 %% GUI
 global ConfigGUI
 % initialization
@@ -38,8 +37,8 @@ ConfigGUI.TOP_axe=subplot(6,2,[1,3,5,7,9,11],'Parent',ConfigGUI.Handle,...
     'Xlim',[40 180],'Ylim',[20 160],...
     'NextPlot','add','Box','on');
 axis(ConfigGUI.TOP_axe,'manual');
-xlabel(ConfigGUI.TOP_axe,'x (mm)');
-ylabel(ConfigGUI.TOP_axe,'y (mm)');
+xlabel(ConfigGUI.TOP_axe,'x');
+ylabel(ConfigGUI.TOP_axe,'y');
 title(ConfigGUI.TOP_axe,'Cardiac Conduction System');
 grid(ConfigGUI.TOP_axe,'on');
 colormap(ConfigGUI.TOP_axe,hot);
@@ -47,37 +46,8 @@ colormap(ConfigGUI.TOP_axe,hot);
 ConfigGUI.node_pos=scatter(ConfigGUI.TOP_axe,[],[],100,'filled','LineWidth',2,'Marker','o','CData',[0 0 0]); % black
 ConfigGUI.probe_pos=scatter(ConfigGUI.TOP_axe,[],[],'LineWidth',1.5,'Marker','d','CData',[0 0 0]);
 
-strings = {'Save & Quit','Quit'};
-left_positions = [0.3 0.4];
-bot_positions = [0.0 0.0];
-h_positions = [0.05 0.05];
-w_positions = [0.1 0.1];
-tags = {'save','quit'};
-callbacks = {@saveGUI,@closeGUI};
-enabled ={'on','on'};
-style={'pushbutton','pushbutton'};
-for idx=1:length(strings)
-    uicontrol('Parent',ConfigGUI.Handle,...
-        'Style',style{idx},...
-        'Units','normalized',...
-        'Position',[left_positions(idx) bot_positions(idx) w_positions(idx) h_positions(idx)],...
-        'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
-        'String',strings{idx},...
-        'Enable',enabled{idx},...
-        'Callback',callbacks{idx},...
-        'HandleVisibility','callback',...
-        'Tag',tags{idx});
-end
 % Current position
 ConfigGUI.setp=scatter(ConfigGUI.TOP_axe,[],[],'LineWidth',1.5,'Marker','o','CData',[1 0 0]);
-uicontrol('Parent',ConfigGUI.Handle,...
-    'Style','text',...
-    'Units','normalized',...
-    'Position',[0.07 0.96 0.1 0.03],...
-    'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
-    'String','Cursor Location',...
-    'HorizontalAlignment','left',...
-    'HandleVisibility','callback');
 ConfigGUI.getp = uicontrol('Parent',ConfigGUI.Handle,...
     'Style','text',...
     'Units','normalized',...
@@ -88,24 +58,28 @@ ConfigGUI.getp = uicontrol('Parent',ConfigGUI.Handle,...
     'HandleVisibility','callback',...
     'Tag','getp');
 
-tabs = uitabgroup(ConfigGUI.Handle,'Position',[0.5 0.05 0.5 0.9]);
-%% Create a panel for node editing
-ConfigGUI.node_edit = uitab(tabs,'Title','Node Edit');
-% streamline the buttons
-strings = {'Select Node','Reset', 'Update', 'Plot AP'};
-left_positions = [0.05 0.8 0.7 0.15];
-bot_positions = [0.8 0.7 0.7 0.6];
-h_positions = [0.15 0.1 0.1 0.15];
-w_positions = [0.15 0.1 0.1 0.15];
-tags = {'selectnode','reset','attrupdate', 'plotnodetrace'};
-callbacks = {@localNodeSelect,@localResetNodeAttr,@localAttrUpdate, @localPlotNodeAP};
-enabled ={'on','on','on','on'};
+% Create a panel for node editing
+ConfigGUI.node_edit = uipanel('Parent',ConfigGUI.Handle,...
+    'Units','normalized',...
+    'Position',[0.5 0.6 0.25 0.3],...
+    'Title','Node Edit',...
+    'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+    'HandleVisibility','callback',...
+    'Tag','nodePanel');
+strings = {'Select Node','Next','Back', 'Update'};
+left_positions = [0.05 0.3 0.05 0.55];
+bot_positions = [0.8 0 0 0];
+h_positions = [0.25 0.25 0.25 0.25];
+w_positions = [0.15 0.15 0.15 0.15];
+tags = {'selectnode','nextattr','prevattr','attrupdate'};
+callbacks = {@localNodeSelect,@localNextNodePressed, @localPrevNodePressed,@localAttrUpdate};
+enabled ={'on','on','on', 'on'};
 style={'pushbutton','pushbutton','pushbutton','pushbutton'};
 for idx = 1:length(strings)
     uicontrol('Parent',ConfigGUI.node_edit,...
         'Style',style{idx},...
         'Units','normalized',...
-        'Position',[left_positions(idx) bot_positions(idx) w_positions(idx) h_positions(idx)],...
+        'Position',[left_positions(idx) bot_positions(idx) h_positions(idx) w_positions(idx)],...
         'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
         'String',strings{idx},...
         'Enable',enabled{idx},...
@@ -113,18 +87,19 @@ for idx = 1:length(strings)
         'HandleVisibility','callback',...
         'Tag',tags{idx});
 end
+ConfigGUI.i = 1;
 %Constants
 
-strings = {'Node (i):', 'Type:', 'Attribute:', 'Attribute Value:'};
-left_positions = [0.2 0.4 0.2 0.45];
-bot_positions = [0.85 0.85 0.8 0.8];
-h_positions = [0.1 0.1 0.05 0.05];
-w_positions = [0.1 0.1 0.1 0.15];
+strings = {'Node (i):', 'Attribute:', 'Attribute Value:'};
+left_positions = [0.05 0.05 0.05];
+bot_positions = [0.6 0.4 0.2];
+h_positions = [0.15 0.25 0.35];
+w_positions = [0.15 0.15 0.15];
 for idx = 1:length(strings)
     uicontrol('Parent',ConfigGUI.node_edit,...
         'Style','text',...
         'Units','normalized',...
-        'Position',[left_positions(idx) bot_positions(idx) w_positions(idx) h_positions(idx)],...
+        'Position',[left_positions(idx) bot_positions(idx) h_positions(idx) w_positions(idx)],...
         'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
         'String',strings{idx},...
         'HandleVisibility','callback');
@@ -133,66 +108,60 @@ end
 ConfigGUI.nodecurr = uicontrol('Parent',ConfigGUI.node_edit,...
     'Style','text',...
     'Units','normalized',...
-    'Position',[0.3 0.85 0.1 0.1],...
+    'Position',[0.25 0.6 0.25 0.15],...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
     'String','N/A',...
     'HandleVisibility','callback',...
     'Tag','nodedisp');
-ConfigGUI.nodetypecurr = uicontrol('Parent',ConfigGUI.node_edit,...
-    'Style','text',...
-    'Units','normalized',...
-    'Position',[0.5 0.85 0.05 0.1],...
-    'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
-    'String','N/A',...
-    'HandleVisibility','callback',...
-    'Tag','nodetypedisp');
-
 % Node Attribute type
 ConfigGUI.nodeatt = uicontrol('Parent',ConfigGUI.node_edit,...
     'Style','popupmenu',...
     'Units','normalized',...
-    'Position',[0.3 0.8 0.15 0.05],...
+    'Position',[0.3 0.4 0.25 0.15],...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
-    'String',cellstr(node_atts(1,3:end)),...
+    'String','N/A',...
     'HandleVisibility','callback',...
-    'Callback',@localNodeAttrClick,...
     'Tag','nodeattdisp');
 % Node attribute value - editable
 ConfigGUI.getnodeatt = uicontrol('Parent',ConfigGUI.node_edit,...
     'Style','edit',...
     'Units','normalized',...
-    'Position',[0.6 0.8 0.15 0.05],...
+    'Position',[0.4 0.2 0.25 0.15],...
     'BackgroundColor',[1 1 1],...
     'String','N/A',...
     'HandleVisibility','callback',...
     'Tag','getnodeatt');
 ConfigGUI.nodesetcheck = false;
-% Display a plot for the action potential trace
-ConfigGUI.AP_nodetrace=subplot(6,2,[1,3,5,7,9,11],'Parent',ConfigGUI.node_edit,...
-    'Unit','normalized','Position',[0.1 0.1 0.85 0.5],...
-    'NextPlot','add','Box','on');
-ConfigGUI.trace = line(ConfigGUI.AP_nodetrace,[],[],'LineWidth',1.5);
-xlabel(ConfigGUI.AP_nodetrace,sprintf('Time (%s)',timescale));
-ylabel(ConfigGUI.AP_nodetrace,'Membrane Potential (mV)');
-title(ConfigGUI.AP_nodetrace,'Cell Action Potential');
-grid(ConfigGUI.AP_nodetrace,'on');
-
-%% Create a panel for path editing
-ConfigGUI.path_edit = uitab(tabs,'Title','Path Edit');
-strings = {'Select Path','Update','Reset'}; 
-left_positions = [0.05 0.7 0.8];
-bot_positions = [0.8 0.7 0.7];
-h_positions = [0.15 0.1 0.1];
-w_positions = [0.15 0.1 0.1];
-tags = {'selectpath','pathval', 'pathvalreset'};
-callbacks = {@localPathSelect,@localPathValUpdate,@localPathReset};
-enabled ={'on','on','on'};
-style={'pushbutton','pushbutton','pushbutton'};
+% use popupmenu in the uicontrol
+% uidropdown('Parent',ConfigGUI.node_edit,...
+%         'Position',[0.05 0.6 0.25 0.15],...
+%         'Items',["N - SA", "N - RE", "N - AV", "M - Atrial","M - Ventricular"],...
+%         'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+%         'ValueChangedFcn',@nodetypeChange,...
+%         'Enable','on',...
+%         'Tag','nodetype');
+% Create a panel for path editing
+ConfigGUI.path_edit = uipanel('Parent',ConfigGUI.Handle,...
+    'Units','normalized',...
+    'Position',[0.75 0.6 0.25 0.3],...
+    'Title','Path Edit',...
+    'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+    'HandleVisibility','callback',...
+    'Tag','pathPanel');
+strings = {'Select Path','Next','Back','Update'}; 
+left_positions = [0.05 0.3 0.05 0.55];
+bot_positions = [0.8 0 0 0 ];
+h_positions = [0.25 0.25 0.25 0.25];
+w_positions = [0.15 0.15 0.15 0.15];
+tags = {'pathselect','nextpathatt','prevpathatt','pathval'};
+callbacks = {@localPathSelect,@localNextPathAtt, @localPrevPathAtt,@localPathValUpdate};
+enabled ={'on','on','on','on'};
+style={'pushbutton','pushbutton','pushbutton','pushbutton'};
 for idx = 1:length(strings)
     uicontrol('Parent',ConfigGUI.path_edit,...
         'Style',style{idx},...
         'Units','normalized',...
-        'Position',[left_positions(idx) bot_positions(idx) w_positions(idx) h_positions(idx)],...
+        'Position',[left_positions(idx) bot_positions(idx) h_positions(idx) w_positions(idx)],...
         'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
         'String',strings{idx},...
         'Enable',enabled{idx},...
@@ -200,17 +169,18 @@ for idx = 1:length(strings)
         'HandleVisibility','callback',...
         'Tag',tags{idx});
 end
+ConfigGUI.j = 5;
 
-strings = {'Node 1 (i):', 'Node 2 (j):', 'Attribute:', 'Attribute Value:', 'A delay (ms):', 'R delay (ms):'};
-left_positions = [0.2 0.4 0.2 0.45 0.2 0.4];
-bot_positions = [0.85 0.85 0.8 0.8 0.7 0.7];
-h_positions = [0.1 0.1 0.05 0.05 0.1 0.1];
-w_positions = [0.1 0.1 0.1 0.15 0.1 0.1];
+strings = {'Node 1 (i):', 'Node 2 (j):', 'Attribute:', 'Attribute Value:'};
+left_positions = [0.05 0.55 0.05 0.05];
+bot_positions = [0.6 0.6 0.4 0.2];
+h_positions = [0.25 0.25 0.25 0.35];
+w_positions = [0.15 0.15 0.15 0.15];
 for idx = 1:length(strings)
     uicontrol('Parent',ConfigGUI.path_edit,...
         'Style','text',...
         'Units','normalized',...
-        'Position',[left_positions(idx) bot_positions(idx) w_positions(idx) h_positions(idx)],...
+        'Position',[left_positions(idx) bot_positions(idx) h_positions(idx) w_positions(idx)],...
         'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
         'String',strings{idx},...
         'HandleVisibility','callback');
@@ -219,7 +189,7 @@ end
 ConfigGUI.node1curr = uicontrol('Parent',ConfigGUI.path_edit,...
     'Style','text',...
     'Units','normalized',...
-    'Position',[0.3 0.85 0.1 0.1],...
+    'Position',[0.3 0.6 0.25 0.15],...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
     'String','N/A',...
     'HandleVisibility','callback',...
@@ -227,66 +197,36 @@ ConfigGUI.node1curr = uicontrol('Parent',ConfigGUI.path_edit,...
 ConfigGUI.node2curr = uicontrol('Parent',ConfigGUI.path_edit,...
     'Style','text',...
     'Units','normalized',...
-    'Position',[0.5 0.85 0.1 0.1],...
+    'Position',[0.75 0.6 0.25 0.15],...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
     'String','N/A',...
     'HandleVisibility','callback',...
     'Tag','node2disp');
 % Node Attribute type
 ConfigGUI.pathatt = uicontrol('Parent',ConfigGUI.path_edit,...
-    'Style','popupmenu',...
+    'Style','text',...
     'Units','normalized',...
-    'Position',[0.3 0.8 0.15 0.05],...
+    'Position',[0.3 0.4 0.25 0.15],...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
-    'String',cellstr(path_atts(1,5:15)),...
+    'String','N/A',...
     'HandleVisibility','callback',...
-    'Callback',@localPathAttrClick,...
     'Tag','pathattdisp');
 % Node attribute value - editable
 ConfigGUI.getpathatt = uicontrol('Parent',ConfigGUI.path_edit,...
     'Style','edit',...
     'Units','normalized',...
-    'Position',[0.6 0.8 0.15 0.05],...
+    'Position',[0.4 0.2 0.25 0.15],...
     'BackgroundColor',[1 1 1],...
     'String','N/A',...
     'HandleVisibility','callback',...
     'Tag','getpathatt');
-ConfigGUI.adelay = uicontrol('Parent',ConfigGUI.path_edit,...
-    'Style','text',...
-    'Units','normalized',...
-    'Position',[0.3 0.7 0.1 0.1],...
-    'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
-    'String','N/A',...
-    'HandleVisibility','callback',...
-    'Tag','Adelay');
-ConfigGUI.rdelay = uicontrol('Parent',ConfigGUI.path_edit,...
-    'Style','text',...
-    'Units','normalized',...
-    'Position',[0.5 0.7 0.1 0.1],...
-    'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
-    'String','N/A',...
-    'HandleVisibility','callback',...
-    'Tag','Rdelay');
 ConfigGUI.pathsetcheck = false;
 ConfigGUI.firsttime_path = true;
-%% Tab for creating nodes as well as deleting them
-ConfigGUI.node_create = uitab(tabs,'Title','Node Creation');
-% 1. Receive click location to place the node
-% 2. Select which preset to use as a base
-% 3. Save node to the network
-%% Tab for creating paths as well as deleting them
-ConfigGUI.path_create = uitab(tabs,'Title','Path Creation');
-% 1. Receive clickS
-% -- i. Start node
-% -- ii. End node
-% 2. Select which preset to use as a base
-% 3. Save the path to the network
 %Load the default model
 load_model(filename);
 % Store ConfigGUI to Userdata and communicate with the Simulink model
 %set_param(sprintf('%s/S-Function',ConfigGUI.modelName),'UserData',ConfigGUI);
 %%% SET THE node/path details?????
-waitfor(ConfigGUI.Handle);
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Function for Load model - displays the system
@@ -325,88 +265,58 @@ end
 
 % Create the legend
 legend([ConfigGUI.node_pos,ConfigGUI.probe_pos],{'Node','Probe'});
-I = imread('heartoutline.jpg'); 
-x = [20 180];
-y = [28 192];
-I = flipdim(I, 1);
-h= image(ConfigGUI.TOP_axe,x,y,I); 
-uistack(h,'bottom')
 hold on;
-
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Callback Function for selecting the node
 function localNodeSelect(hObject,eventdata) %#ok
 global ConfigGUI
 ConfigGUI.nodesetcheck = true;
-b = findobj('tag','selectnode');
-b.Enable = 'off';
+% Temporarily disable select node button????
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Callback Function for attribute selection
-function localNodeAttrClick(hObject,eventdata)
+% Callback Function for next node attribute
+function localNextNodePressed(hObject,eventdata) %#ok
 global ConfigGUI
 global node_atts
-set(ConfigGUI.getnodeatt,'String',sprintf('%f',node_atts{ConfigGUI.ind1+1,ConfigGUI.nodeatt.Value+2}));
+% Using current node, cycle to the next attribute
+ConfigGUI.i = ConfigGUI.i + 1;
+if ConfigGUI.i > size(node_atts,2)
+    ConfigGUI.i = 1;
+end
+set(ConfigGUI.nodeatt,'String',node_atts(1,ConfigGUI.i));
+if strcmp(node_atts(1,ConfigGUI.i),'Type')
+    set(ConfigGUI.getnodeatt,'String',node_atts{ConfigGUI.ind1+1,ConfigGUI.i});
+else
+    set(ConfigGUI.getnodeatt,'String',sprintf('%f',node_atts{ConfigGUI.ind1+1,ConfigGUI.i}));
+end
 drawnow update;
 end
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Callback Function for previous node attribute
-function localResetNodeAttr(hObject,eventdata)
+function localPrevNodePressed(hObject,eventdata)
 global ConfigGUI
 global node_atts
-global node_atts_copy
-% store the previous node attributes
-temp = node_atts;
-temp{ConfigGUI.ind1+1,ConfigGUI.nodeatt.Value+2} = node_atts_copy{ConfigGUI.ind1+1,ConfigGUI.nodeatt.Value+2};
-assignin('base','node_atts',temp)
-set(ConfigGUI.getnodeatt,'String',sprintf('%f',node_atts{ConfigGUI.ind1+1,ConfigGUI.nodeatt.Value+2}));
+% Using current node, cycle to the previous attribute
+ConfigGUI.i = ConfigGUI.i - 1;
+if ConfigGUI.i < 1
+    ConfigGUI.i = size(node_atts,2);
+end
+set(ConfigGUI.nodeatt,'String',node_atts(1,ConfigGUI.i));
+if strcmp(node_atts(1,ConfigGUI.i),'Type')
+    set(ConfigGUI.getnodeatt,'String',node_atts{ConfigGUI.ind1+1,ConfigGUI.i});
+else
+    set(ConfigGUI.getnodeatt,'String',sprintf('%f',node_atts{ConfigGUI.ind1+1,ConfigGUI.i}));
+end
 drawnow update;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Callback Function for updating the current attributes value
 function localAttrUpdate(hObject,eventdata) 
 global ConfigGUI
-global node_atts
 % receive the value, check if its NaN, store it in the current nodes, current attribute 
-val = str2double(get(ConfigGUI.getnodeatt,'String'));
-if isnan(val)
-    disp('Error occured. Please ensure value is numeric.')
-else
-    temp = node_atts;
-    temp{ConfigGUI.ind1+1,ConfigGUI.nodeatt.Value+2} = val;
-    assignin('base','node_atts',temp);
-end
-drawnow update;
-end
 
-function localPlotNodeAP(hObject,eventdata)
-global ConfigGUI
-global node_atts
-global params
-params = [];
-% plot the current nodes model trace
-if strcmp('N',node_atts(ConfigGUI.ind1+1,1))
-    assignin('base','params',[cell2mat(cat(2,node_atts(ConfigGUI.ind1+1,3:23),...
-        node_atts(ConfigGUI.ind1+1,end-3:end-2)))]);
-    test = load_system("N_v6_GUI.slx");
-elseif strcmp('M',node_atts(ConfigGUI.ind1+1,1))
-    assignin('base','params',[cell2mat(node_atts(ConfigGUI.ind1+1,24:end-2))]);
-    test = load_system("M_v4_GUI.slx");
-elseif strcmp('NM',node_atts(ConfigGUI.ind1+1,1))
-    assignin('base','params',[cell2mat(node_atts(ConfigGUI.ind1+1,3:end-2)) 1 1]);
-    test = load_system("NM_v4_GUI.slx");
-end
-qv = sim(test);
-time = qv.APvoltage.time;
-trace = qv.APvoltage.data;
-close_system(test)
-% Add option to hold on to the trace - how many???
-delete(findobj('tag','myTrace'))
-line(ConfigGUI.AP_nodetrace,time,trace,'color',[1 0 0],'LineWidth',2,'tag','myTrace')
-drawnow update;
-
+%%% Potentially an extra button to actually store the updated value????
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -414,70 +324,42 @@ end
 function localPathSelect(hObject,eventdata)
 global ConfigGUI
 ConfigGUI.pathsetcheck = true;
-p = findobj('tag','selectpath');
-p.Enable = 'off';        
+% Temporarily disable select path button????
+        
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Callback Function for next attribute
-function localPathAttrClick(hObject,eventdata)
+function localNextPathAtt(hObject,eventdata)
 global ConfigGUI
 global path_atts
-set(ConfigGUI.getpathatt,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,ConfigGUI.pathatt.Value+4}));
+% Using current node, cycle to the previous attribute
+ConfigGUI.j = ConfigGUI.j + 1;
+if ConfigGUI.j > 15
+    ConfigGUI.j = 5;
+end
+set(ConfigGUI.pathatt,'String',path_atts(1,ConfigGUI.j));
+set(ConfigGUI.getpathatt,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,ConfigGUI.j}));
 drawnow update;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Callback Function for resetting the currently selected attribute
-function localPathReset(hObject,eventdata)
+% Callback Function for previous attribute
+function localPrevPathAtt(hObject,eventdata)
 global ConfigGUI
 global path_atts
-global path_atts_copy
-% store the previous node attributes
-temp = path_atts;
-temp{ConfigGUI.pathind+1,ConfigGUI.pathatt.Value+4} = path_atts_copy{ConfigGUI.pathind+1,ConfigGUI.pathatt.Value+4};
-temp{ConfigGUI.pathind+1,21} = temp{ConfigGUI.pathind+1,20}/temp{ConfigGUI.pathind+1,5};
-temp{ConfigGUI.pathind+1,22} = temp{ConfigGUI.pathind+1,20}/temp{ConfigGUI.pathind+1,10};
-assignin('base','path_atts',temp)
-set(ConfigGUI.getpathatt,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,ConfigGUI.pathatt.Value+4}));
-set(ConfigGUI.adelay,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,21}));
-set(ConfigGUI.rdelay,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,22}));
+% Using current node, cycle to the previous attribute
+ConfigGUI.j = ConfigGUI.j - 1;
+if ConfigGUI.j < 5
+    ConfigGUI.j = 15;
+end
+set(ConfigGUI.pathatt,'String',path_atts(1,ConfigGUI.j));
+set(ConfigGUI.getpathatt,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,ConfigGUI.j}));
 drawnow update;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Callback Function for updating the current attributes value
 function localPathValUpdate(hObject,eventdata) 
 global ConfigGUI
-global path_atts
 % receive the value, check if its NaN, store it in the current nodes, current attribute 
-val = str2double(get(ConfigGUI.getpathatt,'String'));
-if isnan(val)
-    disp('Error occured. Please ensure value is numeric.')
-else
-    temp = path_atts;
-    temp{ConfigGUI.pathind+1,ConfigGUI.pathatt.Value+4} = val;
-    temp{ConfigGUI.pathind+1,21} = temp{ConfigGUI.pathind+1,20}/temp{ConfigGUI.pathind+1,5};
-    temp{ConfigGUI.pathind+1,22} = temp{ConfigGUI.pathind+1,20}/temp{ConfigGUI.pathind+1,10};
-    assignin('base','path_atts',temp);
-    set(ConfigGUI.adelay,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,21}));
-    set(ConfigGUI.rdelay,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,22}));
-end
-drawnow update;
-
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function saveGUI(hObject,eventdata)
-global ConfigGUI
-global path_atts
-global node_atts
-%%% Save the model updates and empty any arrays
-% Save the path_atts and node_atts to files (nonspecific naming, to then
-% use in the full model)
-close all
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function closeGUI(hObject,eventdata)
-global ConfigGUI
-% Close the model without saving anything
-close all
 
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -508,34 +390,39 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
     if m1 < m2
         str = append('Node: ',int2str(ind1),' = ', nodes_name(ind1+1,1));
         if strcmp('N',nodes_name(ind1+1,2))
-            str = [str,'Cell Type: N','-> Pacemaker'];
+            str = [str,'Cell Type: Pacemaker (N)'];
             back_color = [1 1 .3];
         elseif strcmp('NM',nodes_name(ind1+1,2))
-            str = [str,'Cell Type: NM','-> Subsidiary Pacemaker'];
+            str = [str,'Cell Type: Subsidiary Pacemaker (NM)'];
             back_color = [1 .8 .4];
         elseif strcmp('M',nodes_name(ind1+1,2))
-            str = [str,'Cell Type: M','-> Myocyte'];
+            str = [str,'Cell Type: Myocyte (M)'];
             back_color = [1 .8 .8];
         end
     else
         str = append('Probe: ',int2str(ind2),' = ', probes_name(ind2+1));
         back_color = [.75 .75 .75];
     end
+    % Display information for the node
+    delete(findobj('tag','mytooltip'))
+    text(curX+xoffset,curY+yoffset,str,...
+        'backgroundcolor',back_color,'tag','mytooltip','edgecolor',[0 0 0],...
+        'hittest','off')
 
     if ConfigGUI.nodesetcheck
         c=zeros(size(ConfigGUI.Node_pos,1),3);
         ConfigGUI.ind1 = ind1;
+        ConfigGUI.i = 1;
         %set the node information based on nearest node
         c(ConfigGUI.ind1,:) = [1 0 0];
         set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
         set(ConfigGUI.nodecurr,'String',sprintf('%s (%i)',nodes_name{ind1+1,1}, ind1));
-        set(ConfigGUI.nodetypecurr,'String',node_atts(ind1+1,1));
-        set(ConfigGUI.getnodeatt,'String',sprintf('%f',node_atts{ConfigGUI.ind1+1,ConfigGUI.nodeatt.Value+2}));
+        set(ConfigGUI.nodeatt,'String',node_atts(1,ConfigGUI.i));
+        set(ConfigGUI.getnodeatt,'String',node_atts{ind1+1,ConfigGUI.i});
         ConfigGUI.nodesetcheck = false;
-        b = findobj('tag','selectnode');
-        b.Enable = 'on';
     end
     if ConfigGUI.pathsetcheck
+        ConfigGUI.j = 5;
         %set the path information based on nearest two nodes
         if ~ConfigGUI.firsttime_path
             ConfigGUI.path_plot(ConfigGUI.pathind)=line([ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,3},1),...
@@ -552,21 +439,14 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
             [ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,3},2),...
             ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,4},2)],'LineWidth',1.5,'Color',[1 0 0],...
             'Parent',ConfigGUI.TOP_axe);
+        %ConfigGUI.path_plot(ConfigGUI.pathind).Annotation.LegendInformation.IconDisplayStyle = 'off';
         legend([ConfigGUI.node_pos,ConfigGUI.probe_pos],{'Node','Probe'});
         set(ConfigGUI.node1curr, 'String', sprintf('%s (%i)',path_atts{ConfigGUI.pathind+1,1},path_atts{ConfigGUI.pathind+1,3}));
         set(ConfigGUI.node2curr, 'String', sprintf('%s (%i)',path_atts{ConfigGUI.pathind+1,2},path_atts{ConfigGUI.pathind+1,4}));
-        set(ConfigGUI.getpathatt,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,ConfigGUI.pathatt.Value+4}));
-        set(ConfigGUI.adelay,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,21}));
-        set(ConfigGUI.rdelay,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,22}));
+        set(ConfigGUI.pathatt,'String',path_atts(1,ConfigGUI.j));
+        set(ConfigGUI.getpathatt,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,ConfigGUI.j}));
         ConfigGUI.pathsetcheck = false;
-        p = findobj('tag','selectpath');
-        p.Enable = 'on';
     end
-    % Display information for the node
-    delete(findobj('tag','mytooltip'))
-    text(curX+xoffset,curY+yoffset,str,...
-        'backgroundcolor',back_color,'tag','mytooltip','edgecolor',[0 0 0],...
-        'hittest','off')
     drawnow update;
 else
     set(ConfigGUI.getp,'String',sprintf('(Outside)'));

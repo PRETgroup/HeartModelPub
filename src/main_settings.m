@@ -8,6 +8,7 @@ classdef main_settings
         plot5 
         param 
         editmodel
+        units
     end
     methods 
         function obj = main_settings()
@@ -19,6 +20,7 @@ classdef main_settings
             obj.plot5 = 'AR/VR';
             obj.param = 'Normal';
             obj.editmodel = false;
+            obj.units = 1;
         end
         function obj = set.plot0(obj,val)
             obj.plot0 = val;
@@ -40,6 +42,9 @@ classdef main_settings
         end
         function obj = set.param(obj,val)
             obj.param = val;
+        end
+        function obj = set.units(obj,val)
+            obj.units = val;
         end
         function obj = set.editmodel(obj,val)
             obj.editmodel = val;
