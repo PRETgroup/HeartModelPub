@@ -281,6 +281,71 @@ ConfigGUI.path_create = uitab(tabs,'Title','Path Creation');
 % -- ii. End node
 % 2. Select which preset to use as a base
 % 3. Save the path to the network
+
+strings = {'Select Node 1','Select Node 2','Save'}; 
+left_positions = [0.05 0.45 0.5];
+bot_positions = [0.8 0.8 0.65];
+h_positions = [0.15 0.15 0.1];
+w_positions = [0.15 0.15 0.1];
+tags = {'node1','node2', 'savepath'};
+callbacks = {@node1select,@node2select,@savepath};
+enabled ={'on','on','on'};
+style={'pushbutton','pushbutton','pushbutton'};
+for idx = 1:length(strings)
+    uicontrol('Parent',ConfigGUI.path_create,...
+        'Style',style{idx},...
+        'Units','normalized',...
+        'Position',[left_positions(idx) bot_positions(idx) w_positions(idx) h_positions(idx)],...
+        'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+        'String',strings{idx},...
+        'Enable',enabled{idx},...
+        'Callback',callbacks{idx},...
+        'HandleVisibility','callback',...
+        'Tag',tags{idx});
+end
+ConfigGUI.node1set = false;
+ConfigGUI.node2set = false;
+strings = {'1', '2', '3', '4', '5'};
+ConfigGUI.pathpreset = uicontrol('Parent',ConfigGUI.path_create,...
+    'Style','popupmenu',...
+    'Units','normalized',...
+    'Position',[0.35 0.65 0.15 0.1],...
+    'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+    'String',strings,...
+    'HandleVisibility','callback',...
+    'Tag','pathpreset');
+% Nodes selected for the path
+ConfigGUI.node1path = uicontrol('Parent',ConfigGUI.path_create,...
+    'Style','text',...
+    'Units','normalized',...
+    'Position',[0.3 0.85 0.1 0.1],...
+    'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+    'String','N/A',...
+    'HandleVisibility','callback',...
+    'Tag','node1path');
+ConfigGUI.node2path = uicontrol('Parent',ConfigGUI.path_create,...
+    'Style','text',...
+    'Units','normalized',...
+    'Position',[0.7 0.85 0.1 0.1],...
+    'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+    'String','N/A',...
+    'HandleVisibility','callback',...
+    'Tag','node2path');
+
+strings = {'Node 1 (i):', 'Node 2 (j):'};
+left_positions = [0.2 0.6];
+bot_positions = [0.85 0.85];
+h_positions = [0.1 0.1];
+w_positions = [0.1 0.1];
+for idx = 1:length(strings)
+    uicontrol('Parent',ConfigGUI.path_create,...
+        'Style','text',...
+        'Units','normalized',...
+        'Position',[left_positions(idx) bot_positions(idx) w_positions(idx) h_positions(idx)],...
+        'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+        'String',strings{idx},...
+        'HandleVisibility','callback');
+end
 %Load the default model
 load_model(filename);
 % Store ConfigGUI to Userdata and communicate with the Simulink model
@@ -335,6 +400,7 @@ hold on;
 
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Node edit functions
 % Callback Function for selecting the node
 function localNodeSelect(hObject,eventdata) %#ok
 global ConfigGUI
@@ -380,7 +446,8 @@ else
 end
 drawnow update;
 end
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Plotting the currently selected nodes AP
 function localPlotNodeAP(hObject,eventdata)
 global ConfigGUI
 global node_atts
@@ -410,6 +477,7 @@ drawnow update;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Functions for selecting the path
 % Callback Function for selecting the path to edit
 function localPathSelect(hObject,eventdata)
 global ConfigGUI
@@ -463,7 +531,43 @@ end
 drawnow update;
 
 end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Functions for creating a node
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Functions for creating a path
+% Selecting the first node in the path
+function node1select(hObject,eventdata)
+global ConfigGUI
+p = findobj('tag','node1');
+p.Enable = 'off';        
+p = findobj('tag','node2');
+p.Enable = 'off';       
+ConfigGUI.node1set = true;
+
+end
+% Selecting the second node in the path
+function node2select(hObject,eventdata)
+global ConfigGUI
+p = findobj('tag','node1');
+p.Enable = 'off';        
+p = findobj('tag','node2');
+p.Enable = 'off';       
+ConfigGUI.node2set = true;
+
+end
+% Save the current path with drop down preset
+function savepath(hObject,eventdata)
+%
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Other functions
+
 function saveGUI(hObject,eventdata)
 global ConfigGUI
 global path_atts
@@ -561,6 +665,21 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         ConfigGUI.pathsetcheck = false;
         p = findobj('tag','selectpath');
         p.Enable = 'on';
+    end
+    if ConfigGUI.node1set
+        set(ConfigGUI.node1path, 'String', sprintf('%s (%i)',nodes_name{ind1+1,1},ind1));        
+        p = findobj('tag','node1');
+        p.Enable = 'on';        
+        p = findobj('tag','node2');
+        p.Enable = 'on';       
+        ConfigGUI.node1set = false;
+    elseif ConfigGUI.node2set
+        set(ConfigGUI.node2path, 'String', sprintf('%s (%i)',nodes_name{ind1+1,1},ind1));
+        p = findobj('tag','node1');
+        p.Enable = 'on';        
+        p = findobj('tag','node2');
+        p.Enable = 'on';       
+        ConfigGUI.node2set = false;
     end
     % Display information for the node
     delete(findobj('tag','mytooltip'))

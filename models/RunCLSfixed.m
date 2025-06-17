@@ -31,6 +31,7 @@ if outputs.units == 2
     assignin('base','solvertime',5);
     assignin('base','stepsize',0.0005);
     assignin('base','timescale','s');
+    assignin('base','divider',1); % to be used with the N node ms/s setting in RR
 elseif outputs.units == 1
     filename='N3Cfg.mat'; 
     datafile='N3Data.mat'; 
@@ -39,6 +40,7 @@ elseif outputs.units == 1
     assignin('base','solvertime',5000);
     assignin('base','stepsize',0.1);
     assignin('base','timescale','ms');
+    assignin('base','divider',1000);
 end
 % contains all configurations of heart model
 load(filename);
