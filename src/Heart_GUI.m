@@ -555,13 +555,13 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
     if m1 < m2
         str = append('Node: ',int2str(ind1),' = ', nodes_name(ind1+1,1));
         if strcmp('N',nodes_name(ind1+1,2))
-            str = [str,'Cell Type: Pacemaker'];
+            str = [str,'Cell Type: N'];
             back_color = [1 1 .3];
         elseif strcmp('NM',nodes_name(ind1+1,2))
-            str = [str,'Cell Type: Subsidiary Pacemaker'];
+            str = [str,'Cell Type: NM'];
             back_color = [1 .8 .4];
         elseif strcmp('M',nodes_name(ind1+1,2))
-            str = [str,'Cell Type: Myocyte'];
+            str = [str,'Cell Type: M'];
             back_color = [1 .8 .8];
         end
     else

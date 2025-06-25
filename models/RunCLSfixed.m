@@ -67,13 +67,26 @@ if outputs.editmodel
     global node_atts_copy
     global params
     global path_atts_copy
+    global nodes_name
+    global probes_name
     temp = nodes_raw(:,2:end);
     temp(:,end-2) = [];
+    temp(end,:) = [];
     assignin('base','node_atts',temp);
     assignin('base','node_atts_copy',temp);
     assignin('base','path_atts',path_raw);
     assignin('base','path_atts_copy',path_raw);
-    Heart_Editing_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw,params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale);
+
+    temp1 = nodes_raw(:,1:2);
+    temp1(end,:) = [];
+    assignin('base','nodes_name',temp1);
+    temp2 = probes_raw(:,1);
+    assignin('base','probes_name',temp2);
+    Heart_Editing_GUI(mdl,modelName,filename,savepath,nodes_name,probes_name,params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale);
 end
+
+% TO ADD: Somehow update the model ONLY IF the save and quit function was used in
+% the Heart_Editing_GUI
+
 % In the model, there should be a S-function to save data to the same structure of the GUI.
-Heart_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw,timescale); 
+%Heart_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw,timescale); 

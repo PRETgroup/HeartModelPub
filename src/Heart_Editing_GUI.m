@@ -1,19 +1,28 @@
-function Heart_Editing_GUI(mdl,modelName,filename,savepath,raw_excel,raw_probes,model_params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale)
+function Heart_Editing_GUI(mdl,modelName,filename,savepath,nodes_name,probes_name,model_params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale)
 % Copyright 2025 Ben Allen.
 % This program is released under license GPL version 3.
 close all
 global nodes_name
-nodes_name = raw_excel(:,1:2);
 global probes_name
-probes_name = raw_probes(:,1);
-global node_atts_copy
-global path_atts_copy
+global node_atts_copy % Create unique rows for path creation
+global path_atts_copy % Create unique rows for path creation
 global node_atts
 global path_atts
 global model_params
 global timescale
 %% GUI
 global ConfigGUI
+% How to convert cell array into just the numerical values
+%ConfigGUI.path_presets = unique(path_atts_copy{2:55,5:15})
+node_temp = cell2mat(node_atts_copy(2:44,3:50));
+node_temp(:,45:46)=40000;
+node_temp(isnan(node_temp))=40000;
+[ConfigGUI.node_presets,ConfigGUI.unique_node_idx] = unique(node_temp,'rows');
+ConfigGUI.node_presets = changem(ConfigGUI.node_presets,NaN,40000);
+ConfigGUI.unique_node_idx = ConfigGUI.unique_node_idx +1;
+path_temp = cell2mat(path_atts_copy(2:55,5:15));
+[ConfigGUI.path_presets,ConfigGUI.unique_path_idx] = unique(path_temp,'rows');
+ConfigGUI.unique_path_idx = ConfigGUI.unique_path_idx +1;
 % initialization
 ConfigGUI.path_plot=[];
 ConfigGUI.cells=[];
@@ -99,7 +108,7 @@ h_positions = [0.15 0.1 0.1 0.15];
 w_positions = [0.15 0.1 0.1 0.15];
 tags = {'selectnode','reset','attrupdate', 'plotnodetrace'};
 callbacks = {@localNodeSelect,@localResetNodeAttr,@localAttrUpdate, @localPlotNodeAP};
-enabled ={'on','on','on','on'};
+enabled ={'on','off','off','off'};
 style={'pushbutton','pushbutton','pushbutton','pushbutton'};
 for idx = 1:length(strings)
     uicontrol('Parent',ConfigGUI.node_edit,...
@@ -186,7 +195,7 @@ h_positions = [0.15 0.1 0.1];
 w_positions = [0.15 0.1 0.1];
 tags = {'selectpath','pathval', 'pathvalreset'};
 callbacks = {@localPathSelect,@localPathValUpdate,@localPathReset};
-enabled ={'on','on','on'};
+enabled ={'on','off','off'};
 style={'pushbutton','pushbutton','pushbutton'};
 for idx = 1:length(strings)
     uicontrol('Parent',ConfigGUI.path_edit,...
@@ -201,7 +210,7 @@ for idx = 1:length(strings)
         'Tag',tags{idx});
 end
 
-strings = {'Node 1 (i):', 'Node 2 (j):', 'Attribute:', 'Attribute Value:', 'A delay (ms):', 'R delay (ms):'};
+strings = {'Node 1 (i):', 'Node 2 (j):', 'Attribute:', 'Attribute Value:', sprintf('A delay (%s):',timescale), sprintf('R delay (%s):',timescale)};
 left_positions = [0.2 0.4 0.2 0.45 0.2 0.4];
 bot_positions = [0.85 0.85 0.8 0.8 0.7 0.7];
 h_positions = [0.1 0.1 0.05 0.05 0.1 0.1];
@@ -272,25 +281,103 @@ ConfigGUI.firsttime_path = true;
 %% Tab for creating nodes as well as deleting them
 ConfigGUI.node_create = uitab(tabs,'Title','Node Creation');
 % 1. Receive click location to place the node
+ConfigGUI.selectlocal = false;
+strings = {'Select Location','Save','Cancel'}; 
+left_positions = [0.05 0.5 0.6];
+bot_positions = [0.8 0.8 0.8];
+h_positions = [0.15 0.1 0.1];
+w_positions = [0.15 0.1 0.1];
+tags = {'selectlocation','savenode','cancelnode'};
+callbacks = {@selectlocation,@savenode,@cancelnode};
+enabled ={'on','off','off'};
+style={'pushbutton','pushbutton','pushbutton'};
+for idx = 1:length(strings)
+    uicontrol('Parent',ConfigGUI.node_create,...
+        'Style',style{idx},...
+        'Units','normalized',...
+        'Position',[left_positions(idx) bot_positions(idx) w_positions(idx) h_positions(idx)],...
+        'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+        'String',strings{idx},...
+        'Enable',enabled{idx},...
+        'Callback',callbacks{idx},...
+        'HandleVisibility','callback',...
+        'Tag',tags{idx});
+end
+% Name the node
+ConfigGUI.nodename = uicontrol('Parent',ConfigGUI.node_create,...
+    'Style','edit',...
+    'Units','normalized',...
+    'Position',[0.35 0.8 0.15 0.1],...
+    'BackgroundColor', get(ConfigGUI.Handle,'Color'),...
+    'String','New_Cell',...
+    'HandleVisibility','callback',...
+    'Tag','nodepreset');
 % 2. Select which preset to use as a base
-% 3. Save node to the network
+%ConfigGUI.node_presets for the raw info
+strings = cell(length(ConfigGUI.unique_node_idx),1);
+for idx = 1:length(ConfigGUI.unique_node_idx)
+    strings{idx} = append(node_atts_copy{ConfigGUI.unique_node_idx(idx),1},' ','-',' ',...
+        nodes_name{ConfigGUI.unique_node_idx(idx)});
+end
+% N/M/NM plus the name of node to name the preset (strings)
+ConfigGUI.nodepreset = uicontrol('Parent',ConfigGUI.node_create,...
+    'Style','popupmenu',...
+    'Units','normalized',...
+    'Position',[0.35 0.8 0.15 0.1],...
+    'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+    'String',strings,...
+    'HandleVisibility','callback',...
+    'Tag','nodepreset');
+strings = {'Node Preset:', 'Node Name:'};
+left_positions = [0.25 0.25];
+bot_positions = [0.85 0.75];
+h_positions = [0.1 0.1];
+w_positions = [0.1 0.1];
+for idx = 1:length(strings)
+    uicontrol('Parent',ConfigGUI.node_create,...
+        'Style','text',...
+        'Units','normalized',...
+        'Position',[left_positions(idx) bot_positions(idx) w_positions(idx) h_positions(idx)],...
+        'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+        'String',strings{idx},...
+        'HandleVisibility','callback');
+end
+ConfigGUI.nodecheck = false;
+strings = {'Select Node','Delete Node', 'Cancel Node Deletion'}; 
+left_positions = [0.25 0.5 0.75];
+bot_positions = [0.5 0.5 0.5];
+h_positions = [0.15 0.15 0.15];
+w_positions = [0.15 0.15 0.15];
+tags = {'selectnodedel','delnode','cancelnodedel'};
+callbacks = {@nodeSelect,@deleteNode,@nodeCancelDel};
+enabled ={'on','off','off'};
+style={'pushbutton','pushbutton','pushbutton'};
+for idx = 1:length(strings)
+    uicontrol('Parent',ConfigGUI.node_create,...
+        'Style',style{idx},...
+        'Units','normalized',...
+        'Position',[left_positions(idx) bot_positions(idx) w_positions(idx) h_positions(idx)],...
+        'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+        'String',strings{idx},...
+        'Enable',enabled{idx},...
+        'Callback',callbacks{idx},...
+        'HandleVisibility','callback',...
+        'Tag',tags{idx});
+end
+
+
 %% Tab for creating paths as well as deleting them
 ConfigGUI.path_create = uitab(tabs,'Title','Path Creation');
-% 1. Receive clickS
-% -- i. Start node
-% -- ii. End node
-% 2. Select which preset to use as a base
-% 3. Save the path to the network
 
-strings = {'Select Node 1','Select Node 2','Save'}; 
-left_positions = [0.05 0.45 0.5];
-bot_positions = [0.8 0.8 0.65];
-h_positions = [0.15 0.15 0.1];
-w_positions = [0.15 0.15 0.1];
-tags = {'node1','node2', 'savepath'};
-callbacks = {@node1select,@node2select,@savepath};
-enabled ={'on','on','on'};
-style={'pushbutton','pushbutton','pushbutton'};
+strings = {'Select Node 1','Select Node 2','Save','Cancel'}; 
+left_positions = [0.05 0.45 0.5 0.6];
+bot_positions = [0.8 0.8 0.65 0.65];
+h_positions = [0.15 0.15 0.1 0.1];
+w_positions = [0.15 0.15 0.1 0.1];
+tags = {'node1','node2', 'savepath', 'cancelpath'};
+callbacks = {@node1select,@node2select,@savepath, @cancelpath};
+enabled ={'on','on','off', 'off'};
+style={'pushbutton','pushbutton','pushbutton', 'pushbutton'};
 for idx = 1:length(strings)
     uicontrol('Parent',ConfigGUI.path_create,...
         'Style',style{idx},...
@@ -305,7 +392,12 @@ for idx = 1:length(strings)
 end
 ConfigGUI.node1set = false;
 ConfigGUI.node2set = false;
-strings = {'1', '2', '3', '4', '5'};
+%ConfigGUI.path_presets for the raw info
+strings = cell(length(ConfigGUI.unique_path_idx),1);
+for idx = 1:length(ConfigGUI.unique_path_idx)
+    strings{idx} = append(path_atts_copy{ConfigGUI.unique_path_idx(idx),1},' ','-',' ',...
+        path_atts_copy{ConfigGUI.unique_path_idx(idx),2});
+end
 ConfigGUI.pathpreset = uicontrol('Parent',ConfigGUI.path_create,...
     'Style','popupmenu',...
     'Units','normalized',...
@@ -346,10 +438,32 @@ for idx = 1:length(strings)
         'String',strings{idx},...
         'HandleVisibility','callback');
 end
+
+ConfigGUI.pathfirst2 = true;
+ConfigGUI.pathcheck = false;
+strings = {'Select Path','Delete Path', 'Cancel Deletion'}; 
+left_positions = [0.25 0.5 0.75];
+bot_positions = [0.5 0.5 0.5];
+h_positions = [0.15 0.15 0.15];
+w_positions = [0.15 0.15 0.15];
+tags = {'selectpathdel','delpath', 'cancelpathdel'};
+callbacks = {@pathSelect,@deletePath, @pathCancelDel};
+enabled ={'on','off', 'off'};
+style={'pushbutton','pushbutton', 'pushbutton'};
+for idx = 1:length(strings)
+    uicontrol('Parent',ConfigGUI.path_create,...
+        'Style',style{idx},...
+        'Units','normalized',...
+        'Position',[left_positions(idx) bot_positions(idx) w_positions(idx) h_positions(idx)],...
+        'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+        'String',strings{idx},...
+        'Enable',enabled{idx},...
+        'Callback',callbacks{idx},...
+        'HandleVisibility','callback',...
+        'Tag',tags{idx});
+end
 %Load the default model
 load_model(filename);
-% Store ConfigGUI to Userdata and communicate with the Simulink model
-%set_param(sprintf('%s/S-Function',ConfigGUI.modelName),'UserData',ConfigGUI);
 %%% SET THE node/path details?????
 waitfor(ConfigGUI.Handle);
 end
@@ -368,7 +482,7 @@ if ~isempty(ConfigGUI.Node_pos)
     set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);%'ZData',ConfigGUI.Node_pos(:,3),'CData',c);
     
     for n=1:length(ConfigGUI.Node_pos(:,1))
-        text(ConfigGUI.TOP_axe,ConfigGUI.Node_pos(n,1),ConfigGUI.Node_pos(n,2)+2,int2str(n),'Color','blue','FontSize',12);
+        text(ConfigGUI.TOP_axe,ConfigGUI.Node_pos(n,1),ConfigGUI.Node_pos(n,2)+2,int2str(n),'Color','blue','FontSize',12,'tag',sprintf('cell%i',n));
     end
 else
     error('The node position is empty.');
@@ -385,7 +499,9 @@ end
 % add dim.Node_pos(dim.Path(n,3),1) and dim.Node_pos(dim.Path(n,3),2) to
 % the x and y respectively when a z dimension is known
 for n=1:size(dim.Path,1)
-    ConfigGUI.path_plot(n)=line([dim.Node_pos(dim.Path(n,1),1),dim.Node_pos(dim.Path(n,2),1)],[dim.Node_pos(dim.Path(n,1),2),dim.Node_pos(dim.Path(n,2),2)],'LineWidth',1.5,'Color',[0 0 0],'Parent',ConfigGUI.TOP_axe);
+    ConfigGUI.path_plot(n)=line([dim.Node_pos(dim.Path(n,1),1),dim.Node_pos(dim.Path(n,2),1)],...
+        [dim.Node_pos(dim.Path(n,1),2),dim.Node_pos(dim.Path(n,2),2)],'LineWidth',1.5,'Color',[0 0 0],...
+        'Parent',ConfigGUI.TOP_axe,'tag',sprintf('path%i',n));
 end
 
 % Create the legend
@@ -429,6 +545,10 @@ temp{ConfigGUI.ind1+1,ConfigGUI.nodeatt.Value+2} = node_atts_copy{ConfigGUI.ind1
 assignin('base','node_atts',temp)
 set(ConfigGUI.getnodeatt,'String',sprintf('%f',node_atts{ConfigGUI.ind1+1,ConfigGUI.nodeatt.Value+2}));
 drawnow update;
+b = findobj('tag','reset');
+b.Enable = 'off';
+b = findobj('tag','attrupdate');
+b.Enable = 'on';
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Callback Function for updating the current attributes value
@@ -445,13 +565,18 @@ else
     assignin('base','node_atts',temp);
 end
 drawnow update;
+b = findobj('tag','reset');
+b.Enable = 'on';
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Plotting the currently selected nodes AP
 function localPlotNodeAP(hObject,eventdata)
 global ConfigGUI
 global node_atts
+global node_atts_copy
 global params
+b = findobj('tag','plotnodetrace');
+b.Enable = 'off';
 params = [];
 % plot the current nodes model trace
 if strcmp('N',node_atts(ConfigGUI.ind1+1,1))
@@ -469,11 +594,30 @@ qv = sim(test);
 time = qv.APvoltage.time;
 trace = qv.APvoltage.data;
 close_system(test)
-% Add option to hold on to the trace - how many???
-delete(findobj('tag','myTrace'))
-line(ConfigGUI.AP_nodetrace,time,trace,'color',[1 0 0],'LineWidth',2,'tag','myTrace')
+delete(findobj('tag','myAlteredTrace'))
+line(ConfigGUI.AP_nodetrace,time,trace,'color',[1 0 0],'LineWidth',2,'tag','myAlteredTrace')
+hold on;
+% plot the current nodes model trace
+if strcmp('N',node_atts_copy(ConfigGUI.ind1+1,1))
+    assignin('base','params',[cell2mat(cat(2,node_atts_copy(ConfigGUI.ind1+1,3:23),...
+        node_atts_copy(ConfigGUI.ind1+1,end-3:end-2)))]);
+    test = load_system("N_v6_GUI.slx");
+elseif strcmp('M',node_atts_copy(ConfigGUI.ind1+1,1))
+    assignin('base','params',[cell2mat(node_atts_copy(ConfigGUI.ind1+1,24:end-2))]);
+    test = load_system("M_v4_GUI.slx");
+elseif strcmp('NM',node_atts_copy(ConfigGUI.ind1+1,1))
+    assignin('base','params',[cell2mat(node_atts_copy(ConfigGUI.ind1+1,3:end-2)) 1 1]);
+    test = load_system("NM_v4_GUI.slx");
+end
+qv = sim(test);
+time = qv.APvoltage.time;
+trace = qv.APvoltage.data;
+close_system(test)
+delete(findobj('tag','myOgTrace'))
+line(ConfigGUI.AP_nodetrace,time,trace,'color',[0 0 0],'LineWidth',2,'tag','myOgTrace')
 drawnow update;
-
+b = findobj('tag','plotnodetrace');
+b.Enable = 'on';
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -509,6 +653,10 @@ set(ConfigGUI.getpathatt,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,Con
 set(ConfigGUI.adelay,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,21}));
 set(ConfigGUI.rdelay,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,22}));
 drawnow update;
+p = findobj('tag','pathvalreset');
+p.Enable = 'off';
+p = findobj('tag','pathval');
+p.Enable = 'on';
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Callback Function for updating the current attributes value
@@ -529,14 +677,141 @@ else
     set(ConfigGUI.rdelay,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,22}));
 end
 drawnow update;
-
+p = findobj('tag','pathvalreset');
+p.Enable = 'on';
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Functions for creating a node
+% Select the location for the node
+function selectlocation(hObject,eventdata)
+global ConfigGUI
+ConfigGUI.selectlocal = true;
+b = findobj('tag','selectlocation');
+b.Enable = 'off';
+end
+% Save the current node with drop down preset
+function savenode(hObject,eventdata)
+global ConfigGUI
+global node_atts
+global node_atts_copy
+global nodes_name
+% Save the position of the node to the graph
+c = get(ConfigGUI.node_pos,'CData');
+x_temp = get(ConfigGUI.node_pos,'XData');
+y_temp = get(ConfigGUI.node_pos,'YData');
+x = x_temp(end);
+y = y_temp(end);
+ConfigGUI.Node_pos(end+1,:) = [x y];
+c(end,:) = [0 0 0];
+set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
+n = length(ConfigGUI.Node_pos);
+text(ConfigGUI.TOP_axe,ConfigGUI.Node_pos(n,1),ConfigGUI.Node_pos(n,2)+2,int2str(n),'Color','blue','FontSize',12,'tag',sprintf('cell%i',n));
+% Get the attributes for the new node
+type_node = strsplit(ConfigGUI.nodepreset.String{ConfigGUI.nodepreset.Value});
+type_node = type_node{1};
+atts = ConfigGUI.node_presets(ConfigGUI.nodepreset.Value,:);
+atts(45:46) = [x y];
+% Save the new nodes attributes in the correct arrays 
+% TO CHECK: assignin use?
+temp = nodes_name;
+temp(end+1,:) = [{ConfigGUI.nodename.String} type_node];
+assignin('base','nodes_name',temp)
+temp = node_atts;
+temp(end+1,:) = [type_node n num2cell(atts)];
+assignin('base','node_atts',temp)
+temp = node_atts_copy;
+temp(end+1,:) = [type_node n num2cell(atts)];
+assignin('base','node_atts_copy',temp)
+b = findobj('tag','selectlocation');
+b.Enable = 'on';
+b = findobj('tag','savenode');
+b.Enable = 'off';
+b = findobj('tag','cancelnode');
+b.Enable = 'off';
+end
+% Cancel the current node creation
+function cancelnode(hObject,eventdata)
+global ConfigGUI
+% Removing the node from the graph
+c = get(ConfigGUI.node_pos,'CData');
+c(end,:) = [];
+set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
+b = findobj('tag','selectlocation');
+b.Enable = 'on';
+b = findobj('tag','savenode');
+b.Enable = 'off';
+b = findobj('tag','cancelnode');
+b.Enable = 'off';
+end
+% Function for selecting the node to delete
+function nodeSelect(hObject,eventdata)
+global ConfigGUI
+ConfigGUI.nodecheck = true;
+b = findobj('tag','selectnodedel');
+b.Enable = 'off';
+end
+% Function for selecting the node to delete
+function nodeCancelDel(hObject,eventdata)
+global ConfigGUI
+c = get(ConfigGUI.node_pos,'CData');
+color = [0 0 1];        
+[q, idx] = ismember(color,c,'rows');
+if q
+    c(idx,:) = [0 0 0];
+end
+set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
+b = findobj('tag','delnode');
+b.Enable = 'off';
+b = findobj('tag','selectnodedel');
+b.Enable = 'on';
+p = findobj('tag', 'cancelnodedel');
+p.Enable = 'off';
+end
+% Deleting the node from the model
+function deleteNode(hObject,eventdata)
+global ConfigGUI
+global node_atts
+global nodes_name
+global node_atts_copy
+global path_atts
+global path_atts_copy
+% Delete the node physically from the plot
+ConfigGUI.Node_pos(ConfigGUI.ind2,:) = [];
+c = get(ConfigGUI.node_pos,'CData');
+c(ConfigGUI.ind2,:) = [];
+set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
+% Delete the node from the arrays
+true_index = node_atts{ConfigGUI.ind2+1,2};
+partial1 =[node_atts{2:end,2}].';
+[index1,~] = find(partial1 == true_index);
+index1 = index1+1;
+% TO CHECK: assignin use? - 
+node_atts(index1,:) = [];
+node_atts_copy(index1,:) = [];
+nodes_name(index1,:) = [];
+delete(findobj('tag',sprintf('cell%i',true_index)));
+% TO DEBUG: increased deleting of nodes starts randomly deleting other
+% paths
+% PROBLEM: Node_pos/path_plot differential paths possibly??
+% PATH DELETION IS THE ISSUE - checked with commenting out the following
+% statements and deleting nodes continuously 25/06
+partial1 =[path_atts{2:end,3}; path_atts{2:end,4}].';
+[index1,~] = find(partial1 == true_index)
 
-
+delete(ConfigGUI.path_plot(index1))
+for idx =1:length(index1)
+    delete(findobj('tag',sprintf('path%i',idx)));
+end
+index1 = index1+1;
+path_atts(index1,:) = [];
+path_atts_copy(index1,:) = [];
+b = findobj('tag','delnode');
+b.Enable = 'off';
+b = findobj('tag','cancelnodedel');
+b.Enable = 'off';
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Functions for creating a path
@@ -548,7 +823,6 @@ p.Enable = 'off';
 p = findobj('tag','node2');
 p.Enable = 'off';       
 ConfigGUI.node1set = true;
-
 end
 % Selecting the second node in the path
 function node2select(hObject,eventdata)
@@ -558,23 +832,134 @@ p.Enable = 'off';
 p = findobj('tag','node2');
 p.Enable = 'off';       
 ConfigGUI.node2set = true;
-
 end
 % Save the current path with drop down preset
 function savepath(hObject,eventdata)
-%
+global ConfigGUI
+global path_atts
+global path_atts_copy
+global nodes_name
+ConfigGUI.path_plot(end+1)=line([ConfigGUI.Node_pos(ConfigGUI.node1ind,1),ConfigGUI.Node_pos(ConfigGUI.node2ind,1)],...
+ [ConfigGUI.Node_pos(ConfigGUI.node1ind,2),ConfigGUI.Node_pos(ConfigGUI.node2ind,2)],'LineWidth',1.5,'Color',[0 0 0],...
+ 'Parent',ConfigGUI.TOP_axe,'tag',sprintf('path%i',length(ConfigGUI.path_plot)+1));
+legend([ConfigGUI.node_pos,ConfigGUI.probe_pos],{'Node','Probe'});
+atts = ConfigGUI.path_presets(ConfigGUI.pathpreset.Value,:);
+x1 = ConfigGUI.Node_pos(ConfigGUI.node1ind,1);
+x2 = ConfigGUI.Node_pos(ConfigGUI.node2ind,1);
+y1 = ConfigGUI.Node_pos(ConfigGUI.node1ind,2);
+y2 = ConfigGUI.Node_pos(ConfigGUI.node2ind,2);
+dist = sqrt((x1-x2)^2+(x1-x2)^2);
+adelay = dist/atts(1);
+rdelay = dist/atts(6);
+update=[nodes_name(ConfigGUI.node1ind+1,1) nodes_name(ConfigGUI.node2ind+1,1) ...
+    ConfigGUI.node1ind ConfigGUI.node2ind...
+    num2cell(atts) x1 y1 x2 y2 dist adelay rdelay NaN NaN NaN];
+temp = path_atts;
+temp(end+1,:)=update;
+assignin('base','path_atts',temp)
+temp = path_atts_copy;
+temp(end+1,:)=update;
+assignin('base','path_atts_copy',temp)
+set(ConfigGUI.node1path, 'String','N/A');
+set(ConfigGUI.node2path, 'String','N/A');
+c = get(ConfigGUI.node_pos,'CData');
+color = [1 1 0];        
+[q, idx] = ismember(color,c,'rows');
+if q
+    c(idx,:) = [0 0 0];
+end
+color = [0 1 0];        
+[q, idx] = ismember(color,c,'rows');
+if q
+    c(idx,:) = [0 0 0];
+end
+set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
+p = findobj('tag','savepath');
+p.Enable = 'off';
+p = findobj('tag','cancelpath');
+p.Enable = 'off';
+end
+% Cancel the currently selected path creation
+function cancelpath(hObject,eventdata)
+global ConfigGUI
+c = get(ConfigGUI.node_pos,'CData');
+color = [1 1 0];        
+[q, idx] = ismember(color,c,'rows');
+if q
+    c(idx,:) = [0 0 0];
+end
+color = [0 1 0];        
+[q, idx] = ismember(color,c,'rows');
+if q
+    c(idx,:) = [0 0 0];
+end
+set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
+set(ConfigGUI.node2path, 'String', 'N/A');
+set(ConfigGUI.node1path, 'String', 'N/A');
+p = findobj('tag','savepath');
+p.Enable = 'off';
+p = findobj('tag','cancelpath');
+p.Enable = 'off';
+end
+% Selecting path to delete it 
+function pathSelect(hObject,eventdata)
+global ConfigGUI
+ConfigGUI.pathcheck = true;
+p = findobj('tag','selectpathdel');
+p.Enable = 'off';        
+end
+% Selecting path to delete it 
+function pathCancelDel(hObject,eventdata)
+global ConfigGUI
+global path_atts
+ConfigGUI.path_plot(ConfigGUI.pathind1)=line([ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,3},1),...
+    ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,4},1)],...
+    [ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,3},2),...
+    ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,4},2)],'LineWidth',1.5,'Color',[0 0 0],...
+    'Parent',ConfigGUI.TOP_axe,'tag',sprintf('path%i',ConfigGUI.pathind1));
+legend([ConfigGUI.node_pos,ConfigGUI.probe_pos],{'Node','Probe'});
+drawnow update;
+p = findobj('tag','selectpathdel');
+p.Enable = 'on'; 
+p = findobj('tag', 'cancelpathdel');
+p.Enable = 'off';
+p = findobj('tag','delpath');
+p.Enable = 'off';       
+end
+% Deleting the path from the model
+function deletePath(hObject,eventdata)
+global ConfigGUI
+global path_atts
+global path_atts_copy
+% TO DEBUG: deleting too much starts to create chaos
+delete(ConfigGUI.path_plot(ConfigGUI.pathind1))
+delete(findobj('tag',sprintf('path%i',ConfigGUI.pathind1)));
+temp = path_atts;
+temp(ConfigGUI.pathind1+1,:) = [];
+assignin('base','path_atts',temp);
+temp = path_atts_copy;
+temp(ConfigGUI.pathind1+1,:) = [];
+assignin('base','path_atts_copy',temp);
+ConfigGUI.pathfirst2 = true;
+drawnow update;
+p = findobj('tag','delpath');
+p.Enable = 'off';
+p = findobj('tag','cancelpathdel');
+p.Enable = 'off';
+p = findobj('tag','selectpathdel');
+p.Enable = 'on';
+
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Other functions
-
 function saveGUI(hObject,eventdata)
 global ConfigGUI
 global path_atts
 global node_atts
 %%% Save the model updates and empty any arrays
-% Save the path_atts and node_atts to files (nonspecific naming, to then
-% use in the full model)
+% TO ADD: Save the path_atts and node_atts to files (nonspecific naming, to then
+% use in the full model) call PreBuild or other setup function
 close all
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -582,7 +967,6 @@ function closeGUI(hObject,eventdata)
 global ConfigGUI
 % Close the model without saving anything
 close all
-
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Callback Function for click
@@ -610,15 +994,15 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
     [m1,ind1]=min(dist1);
     [m2,ind2]=min(dist2);
     if m1 < m2
-        str = append('Node: ',int2str(ind1),' = ', nodes_name(ind1+1,1));
+        str = append('Node: ',int2str(node_atts{ind1+1,2}),' = ', nodes_name(ind1+1,1));
         if strcmp('N',nodes_name(ind1+1,2))
-            str = [str,'Cell Type: N','-> Pacemaker'];
+            str = [str,'Cell Type: N'];
             back_color = [1 1 .3];
         elseif strcmp('NM',nodes_name(ind1+1,2))
-            str = [str,'Cell Type: NM','-> Subsidiary Pacemaker'];
+            str = [str,'Cell Type: NM'];
             back_color = [1 .8 .4];
         elseif strcmp('M',nodes_name(ind1+1,2))
-            str = [str,'Cell Type: M','-> Myocyte'];
+            str = [str,'Cell Type: M'];
             back_color = [1 .8 .8];
         end
     else
@@ -626,11 +1010,16 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         back_color = [.75 .75 .75];
     end
 
-    if ConfigGUI.nodesetcheck
-        c=zeros(size(ConfigGUI.Node_pos,1),3);
+    if ConfigGUI.nodesetcheck %for editing a node
         ConfigGUI.ind1 = ind1;
         %set the node information based on nearest node
-        c(ConfigGUI.ind1,:) = [1 0 0];
+        c = get(ConfigGUI.node_pos,'CData');
+        color = [1 0 0];        
+        [q, idx] = ismember(color,c,'rows');
+        if q
+            c(idx,:) = [0 0 0];
+        end
+        c(ind1,:) = color;
         set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
         set(ConfigGUI.nodecurr,'String',sprintf('%s (%i)',nodes_name{ind1+1,1}, ind1));
         set(ConfigGUI.nodetypecurr,'String',node_atts(ind1+1,1));
@@ -638,6 +1027,45 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         ConfigGUI.nodesetcheck = false;
         b = findobj('tag','selectnode');
         b.Enable = 'on';
+        b = findobj('tag','reset');
+        b.Enable = 'on';
+        b = findobj('tag','attrupdate');
+        b.Enable = 'on';
+        b = findobj('tag','plotnodetrace');
+        b.Enable = 'on';        
+    elseif ConfigGUI.nodecheck %for deleting a node
+        ConfigGUI.ind2 = ind1;
+        %set the node information based on nearest node
+        c = get(ConfigGUI.node_pos,'CData');
+        color = [0 0 1];        
+        [q, idx] = ismember(color,c,'rows');
+        if q
+            c(idx,:) = [0 0 0];
+        end
+        c(ind1,:) = color;
+        set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
+        ConfigGUI.nodecheck = false;
+        b = findobj('tag','selectnodedel');
+        b.Enable = 'on';
+        b = findobj('tag','delnode');
+        b.Enable = 'on';
+
+        p = findobj('tag', 'cancelnodedel');
+        p.Enable = 'on';
+    elseif ConfigGUI.selectlocal %for creating a node
+        c = get(ConfigGUI.node_pos,'CData');
+        x_temp = get(ConfigGUI.node_pos,'XData');
+        y_temp = get(ConfigGUI.node_pos,'YData');
+        x_temp(end+1) = curX;
+        y_temp(end+1) = curY;
+        c(end+1,:) = [1 0 1];
+        set(ConfigGUI.node_pos,'XData',x_temp,'YData',y_temp,'CData',c);
+        ConfigGUI.selectlocal = false;
+        b = findobj('tag','savenode');
+        b.Enable = 'on';
+        b = findobj('tag','cancelnode');
+        b.Enable = 'on';
+
     end
     if ConfigGUI.pathsetcheck
         %set the path information based on nearest two nodes
@@ -646,7 +1074,7 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
                 ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,4},1)],...
                 [ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,3},2),...
                 ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,4},2)],'LineWidth',1.5,'Color',[0 0 0],...
-                'Parent',ConfigGUI.TOP_axe);
+                'Parent',ConfigGUI.TOP_axe,'tag',sprintf('path%i',ConfigGUI.pathind));
         else
             ConfigGUI.firsttime_path = false;
         end
@@ -655,7 +1083,7 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
             ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,4},1)],...
             [ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,3},2),...
             ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,4},2)],'LineWidth',1.5,'Color',[1 0 0],...
-            'Parent',ConfigGUI.TOP_axe);
+            'Parent',ConfigGUI.TOP_axe,'tag',sprintf('path%i',ConfigGUI.pathind));
         legend([ConfigGUI.node_pos,ConfigGUI.probe_pos],{'Node','Probe'});
         set(ConfigGUI.node1curr, 'String', sprintf('%s (%i)',path_atts{ConfigGUI.pathind+1,1},path_atts{ConfigGUI.pathind+1,3}));
         set(ConfigGUI.node2curr, 'String', sprintf('%s (%i)',path_atts{ConfigGUI.pathind+1,2},path_atts{ConfigGUI.pathind+1,4}));
@@ -665,21 +1093,72 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         ConfigGUI.pathsetcheck = false;
         p = findobj('tag','selectpath');
         p.Enable = 'on';
+        p = findobj('tag','pathval');
+        p.Enable = 'on';
+        p = findobj('tag','pathvalreset');
+        p.Enable = 'on';
+    elseif ConfigGUI.pathcheck % for deleting the path
+        ConfigGUI.pathind1 = nearest_line([curX,curY]);
+        ConfigGUI.path_plot(ConfigGUI.pathind1)=line([ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,3},1),...
+            ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,4},1)],...
+            [ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,3},2),...
+            ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,4},2)],'LineWidth',1.5,'Color',[0 0 1],...
+            'Parent',ConfigGUI.TOP_axe);
+        legend([ConfigGUI.node_pos,ConfigGUI.probe_pos],{'Node','Probe'});
+        ConfigGUI.pathcheck = false;
+        p = findobj('tag','selectpathdel');
+        p.Enable = 'off';        
+        p = findobj('tag','delpath');
+        p.Enable = 'on';
+        p = findobj('tag','cancelpathdel');
+        p.Enable = 'on';
     end
     if ConfigGUI.node1set
+        ConfigGUI.node1ind = ind1;
+        c = get(ConfigGUI.node_pos,'CData');
+        color = [0 1 0];        
+        [q, idx] = ismember(color,c,'rows');
+        if q
+            c(idx,:) = [0 0 0];
+        end
+        c(ind1,:) = color;
+        set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
         set(ConfigGUI.node1path, 'String', sprintf('%s (%i)',nodes_name{ind1+1,1},ind1));        
         p = findobj('tag','node1');
         p.Enable = 'on';        
         p = findobj('tag','node2');
         p.Enable = 'on';       
+        p = findobj('tag','cancelpath');
+        p.Enable = 'on';       
         ConfigGUI.node1set = false;
+        save_var = get(ConfigGUI.node2path, 'String');
+        if ~strcmp(save_var,'N/A')
+            b = findobj('tag','savepath');
+            b.Enable = 'on';
+        end
     elseif ConfigGUI.node2set
+        ConfigGUI.node2ind = ind1;
+        c = get(ConfigGUI.node_pos,'CData');
+        color = [1 1 0];        
+        [q, idx] = ismember(color,c,'rows');
+        if q
+            c(idx,:) = [0 0 0];
+        end
+        c(ind1,:) = color;
+        set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
         set(ConfigGUI.node2path, 'String', sprintf('%s (%i)',nodes_name{ind1+1,1},ind1));
         p = findobj('tag','node1');
         p.Enable = 'on';        
         p = findobj('tag','node2');
-        p.Enable = 'on';       
+        p.Enable = 'on';      
+        p = findobj('tag','cancelpath');
+        p.Enable = 'on';        
         ConfigGUI.node2set = false;
+        save_var = get(ConfigGUI.node1path, 'String');
+        if ~strcmp(save_var,'N/A')
+            b = findobj('tag','savepath');
+            b.Enable = 'on';
+        end
     end
     % Display information for the node
     delete(findobj('tag','mytooltip'))
