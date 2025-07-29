@@ -9,6 +9,7 @@ classdef main_settings
         param 
         editmodel
         units
+        pacemaker
     end
     methods 
         function obj = main_settings()
@@ -21,6 +22,7 @@ classdef main_settings
             obj.param = 'Normal';
             obj.editmodel = false;
             obj.units = 1;
+            obj.pacemaker= 1;
         end
         function obj = set.plot0(obj,val)
             obj.plot0 = val;
@@ -48,6 +50,9 @@ classdef main_settings
         end
         function obj = set.editmodel(obj,val)
             obj.editmodel = val;
+        end
+        function obj = set.pacemaker(obj,val)
+            obj.pacemaker = val;
         end
 
     end

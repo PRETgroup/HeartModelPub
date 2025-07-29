@@ -1,19 +1,17 @@
-function Heart_Editing_GUI(mdl,modelName,filename,savepath,nodes_name,probes_name,model_params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale)
+function Heart_Editing_GUI(filename,nodes_name,probes_name,model_params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale)
 % Copyright 2025 Ben Allen.
 % This program is released under license GPL version 3.
 close all
 global nodes_name
 global probes_name
-global node_atts_copy % Create unique rows for path creation
-global path_atts_copy % Create unique rows for path creation
+global node_atts_copy 
+global path_atts_copy 
 global node_atts
 global path_atts
 global model_params
 global timescale
 %% GUI
 global ConfigGUI
-% How to convert cell array into just the numerical values
-%ConfigGUI.path_presets = unique(path_atts_copy{2:55,5:15})
 node_temp = cell2mat(node_atts_copy(2:44,3:50));
 node_temp(:,45:46)=40000;
 node_temp(isnan(node_temp))=40000;
@@ -464,7 +462,6 @@ for idx = 1:length(strings)
 end
 %Load the default model
 load_model(filename);
-%%% SET THE node/path details?????
 waitfor(ConfigGUI.Handle);
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -787,7 +784,7 @@ true_index = node_atts{ConfigGUI.ind2+1,2};
 partial1 =[node_atts{2:end,2}].';
 [index1,~] = find(partial1 == true_index);
 index1 = index1+1;
-% TO CHECK: assignin use? - 
+% TO CHECK: assignin use? 
 node_atts(index1,:) = [];
 node_atts_copy(index1,:) = [];
 nodes_name(index1,:) = [];
@@ -957,10 +954,20 @@ function saveGUI(hObject,eventdata)
 global ConfigGUI
 global path_atts
 global node_atts
+global nodes_name
+global timescale
 %%% Save the model updates and empty any arrays
-% TO ADD: Save the path_atts and node_atts to files (nonspecific naming, to then
-% use in the full model) call PreBuild or other setup function
 close all
+model.node_atts=node_atts;
+model.nodes_name=nodes_name;
+model.path_atts=path_atts;
+if strcmp('sec',timescale)
+    PreBuild_unified(true,model)
+elseif strcmp('msec',timescale)
+    PreBuild_unified(false,model)
+else
+    disp('Continuing with original, function failed')
+end
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function closeGUI(hObject,eventdata)
@@ -1009,6 +1016,11 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         str = append('Probe: ',int2str(ind2),' = ', probes_name(ind2+1));
         back_color = [.75 .75 .75];
     end
+    % Display information for the node
+    delete(findobj('tag','mytooltip'))
+    text(curX+xoffset,curY+yoffset,str,...
+        'backgroundcolor',back_color,'tag','mytooltip','edgecolor',[0 0 0],...
+        'hittest','off')
 
     if ConfigGUI.nodesetcheck %for editing a node
         ConfigGUI.ind1 = ind1;
@@ -1065,6 +1077,7 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         b.Enable = 'on';
         b = findobj('tag','cancelnode');
         b.Enable = 'on';
+        delete(findobj('tag','mytooltip'))
 
     end
     if ConfigGUI.pathsetcheck
@@ -1097,6 +1110,7 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         p.Enable = 'on';
         p = findobj('tag','pathvalreset');
         p.Enable = 'on';
+        delete(findobj('tag','mytooltip'))        
     elseif ConfigGUI.pathcheck % for deleting the path
         ConfigGUI.pathind1 = nearest_line([curX,curY]);
         ConfigGUI.path_plot(ConfigGUI.pathind1)=line([ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,3},1),...
@@ -1112,6 +1126,7 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         p.Enable = 'on';
         p = findobj('tag','cancelpathdel');
         p.Enable = 'on';
+        delete(findobj('tag','mytooltip'))
     end
     if ConfigGUI.node1set
         ConfigGUI.node1ind = ind1;
@@ -1131,8 +1146,8 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         p = findobj('tag','cancelpath');
         p.Enable = 'on';       
         ConfigGUI.node1set = false;
-        save_var = get(ConfigGUI.node2path, 'String');
-        if ~strcmp(save_var,'N/A')
+        if ~strcmp(ConfigGUI.node2path.String,'N/A') & ...
+                ~strcmp(ConfigGUI.node1path.String,ConfigGUI.node2path.String)
             b = findobj('tag','savepath');
             b.Enable = 'on';
         end
@@ -1154,17 +1169,12 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         p = findobj('tag','cancelpath');
         p.Enable = 'on';        
         ConfigGUI.node2set = false;
-        save_var = get(ConfigGUI.node1path, 'String');
-        if ~strcmp(save_var,'N/A')
+        if ~strcmp(ConfigGUI.node1path.String,'N/A') & ...
+                ~strcmp(ConfigGUI.node1path.String,ConfigGUI.node2path.String)
             b = findobj('tag','savepath');
             b.Enable = 'on';
         end
     end
-    % Display information for the node
-    delete(findobj('tag','mytooltip'))
-    text(curX+xoffset,curY+yoffset,str,...
-        'backgroundcolor',back_color,'tag','mytooltip','edgecolor',[0 0 0],...
-        'hittest','off')
     drawnow update;
 else
     set(ConfigGUI.getp,'String',sprintf('(Outside)'));
