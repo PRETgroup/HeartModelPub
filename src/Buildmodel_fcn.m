@@ -1,4 +1,4 @@
-function Buildmodel_fcn(HeartModel,filename,node_n,node_m,node_nm,path,probe,systempath,library)
+function Buildmodel_fcn(HeartModel,filename,node_n,node_m,node_nm,path,probe,systempath,library,standalone)
 % Copyright 2019 Weiwei Ai.
 % This program is released under license GPL version 3.
 %%
@@ -13,8 +13,8 @@ outputs=dims.cfgports;
 Heart=HeartModel;
 
 %% Model Setup
-simulink;
-open_system(library);
+start_simulink;
+load_system(library);
 open_system(new_system(Heart)); % modelType is the name of the .mat file
 
 %Model Spacing Values
@@ -28,8 +28,10 @@ tagw=20; % tag y length
 
 %% Create the subsystem Heart (Container)
  left_corner=[leftMargin,topMargin];
+ left_corner_static=[leftMargin,topMargin]; 
  l=200;
  w=300;
+ sub_size=[l,w];
  block_name=sprintf('%s/%s',Heart,'Heart'); %node_name comes from the setup script
  add_block('simulink/Ports & Subsystems/Subsystem',block_name); %adds block to model canvas
  set_param(block_name,'Position',[left_corner(1) left_corner(2) left_corner(1)+l left_corner(2)+w]);
@@ -43,14 +45,12 @@ for i=1:size(Node,1) %iterates through node list
     % Which type of node
     if strcmp(Node_name{i,2},'M')
         node=node_m;
-    else if strcmp(Node_name{i,2},'N')
-            node=node_n;
-        else if strcmp(Node_name{i,2},'NM')
-                node=node_nm;
-            else
-                error('The dimension of Nodecfg does not match');
-            end
-        end
+    elseif strcmp(Node_name{i,2},'N')
+        node=node_n;
+    elseif strcmp(Node_name{i,2},'NM')
+        node=node_nm;
+    else
+        error('The dimension of Nodecfg does not match');
     end
     
     % Puts all nodes in first column, each shifted accordingly
@@ -280,121 +280,122 @@ for i=1:size(Node,1)
         orTop = orTop + tagSpacing * numIns+15;
     end     
     % Use summation block if multiple inputs
-        x0=left_corner(1)+90;
-        if strcmp(Node_name{i,1},'RA')|| strcmp(Node_name{i,1},'RVA')
+    x0=left_corner(1)+90;
+    if strcmp(Node_name{i,1},'RA')|| strcmp(Node_name{i,1},'RVA')
         y0=left_corner(2)+(tagSpacing * (numIns+1)/2)-10;
         op_name=sprintf('%s/Node%d_OR',Heart,i);      
         if (numIns+1) > 1
-        add_block('simulink/Math Operations/Sum',op_name);
-        set_param(op_name,'Inputs',num2str(numIns+1),'Position',[x0 y0 x0+tagw y0+tagw]);
+            add_block('simulink/Math Operations/Sum',op_name);
+            set_param(op_name,'Inputs',num2str(numIns+1),'Position',[x0 y0 x0+tagw y0+tagw]);
         end
-        else
+    else
         y0=left_corner(2)+(tagSpacing * numIns/2)-10;
         op_name=sprintf('%s/Node%d_OR',Heart,i);      
         if (numIns) > 1
-        add_block('simulink/Math Operations/Sum',op_name);
-        set_param(op_name,'Inputs',num2str(numIns),'Position',[x0 y0 x0+tagw y0+tagw]);
+            add_block('simulink/Math Operations/Sum',op_name);
+            set_param(op_name,'Inputs',num2str(numIns),'Position',[x0 y0 x0+tagw y0+tagw]);
         end   
-        end
+    end
         
-     % add output tag to paths
-        out_name=sprintf('%s/Path%d',Heart,i);
-        add_block('simulink/Signal Routing/Goto',out_name);
-        x1=x0+25;
-        y1=y0;
-        set_param(out_name,'Position',[x1 y1 x1+tagl y1+tagw],'ShowName','off','GotoTag',sprintf('Path_%d',i));
+    % add output tag to paths
+    out_name=sprintf('%s/Path%d',Heart,i);
+    add_block('simulink/Signal Routing/Goto',out_name);
+    x1=x0+25;
+    y1=y0;
+    set_param(out_name,'Position',[x1 y1 x1+tagl y1+tagw],'ShowName','off','GotoTag',sprintf('Path_%d',i));
 
-     % add input tags to the joint      
-      for j=1:numIns
-      out_name=sprintf('%s/Cell%d_%d',Heart,i,j);
-      add_block('simulink/Signal Routing/From',out_name);
-      temp=joint{i}(j);
-      set_param(out_name,'GotoTag',temp{1});
-      set_param(out_name,'ShowName','off');
-      x0=left_corner(1);
-      y0=left_corner(2)+ (j-1)*tagSpacing;
-      set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]);          
-      if (numIns) > 1
-      add_line(Heart,sprintf('Cell%d_%d/1',i,j),sprintf('Node%d_OR/%d',i,j)); 
-      end
-      end 
-      
-      if (numIns) > 1
-       add_line(Heart,sprintf('Node%d_OR/1',i),sprintf('Path%d/1',i));
-      end
-      
-      if strcmp(Node_name{i,1},'RA')
-      out_name=sprintf('%s/AP',Heart);
-      add_block('simulink/Signal Routing/From',out_name);
-      set_param(out_name,'GotoTag','AP','ShowName','off');
-      x0=left_corner(1);
-      y0=left_corner(2)+ numIns*tagSpacing;
-      set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]); 
-      add_line(Heart,sprintf('AP/1'),sprintf('Node%d_OR/%d',i,j+1)); 
-      end
-      
-      if strcmp(Node_name{i,1},'RVA')
-      out_name=sprintf('%s/VP',Heart);
-      add_block('simulink/Signal Routing/From',out_name);
-      set_param(out_name,'GotoTag','VP','ShowName','off');
-      x0=left_corner(1);
-      y0=left_corner(2)+ numIns*tagSpacing;
-      set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]);   
-      add_line(Heart,sprintf('VP/1'),sprintf('Node%d_OR/%d',i,j+1)); 
-      end
-      
-      if numIns==1 && ~strcmp(Node_name{i,1},'RVA') && ~strcmp(Node_name{i,1},'RA')
-      add_line(Heart,sprintf('Cell%d_%d/1',i,1),sprintf('Path%d/1',i)); 
-      end
+    % add input tags to the joint      
+    for j=1:numIns
+        out_name=sprintf('%s/Cell%d_%d',Heart,i,j);
+        add_block('simulink/Signal Routing/From',out_name);
+        temp=joint{i}(j);
+        set_param(out_name,'GotoTag',temp{1});
+        set_param(out_name,'ShowName','off');
+        x0=left_corner(1);
+        y0=left_corner(2)+ (j-1)*tagSpacing;
+        set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]);          
+        if (numIns) > 1
+            add_line(Heart,sprintf('Cell%d_%d/1',i,j),sprintf('Node%d_OR/%d',i,j)); 
+        end
+    end 
+    
+    if (numIns) > 1
+        add_line(Heart,sprintf('Node%d_OR/1',i),sprintf('Path%d/1',i));
+    end
+    
+    
+    if strcmp(Node_name{i,1},'RA')
+        out_name=sprintf('%s/AP',Heart);
+        add_block('simulink/Signal Routing/From',out_name);
+        set_param(out_name,'GotoTag','AP','ShowName','off');
+        x0=left_corner(1);
+        y0=left_corner(2)+ numIns*tagSpacing;
+        set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]); 
+        add_line(Heart,sprintf('AP/1'),sprintf('Node%d_OR/%d',i,j+1)); 
+    end
+    
+    if strcmp(Node_name{i,1},'RVA')
+        out_name=sprintf('%s/VP',Heart);
+        add_block('simulink/Signal Routing/From',out_name);
+        set_param(out_name,'GotoTag','VP','ShowName','off');
+        x0=left_corner(1);
+        y0=left_corner(2)+ numIns*tagSpacing;
+        set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]);   
+        add_line(Heart,sprintf('VP/1'),sprintf('Node%d_OR/%d',i,j+1)); 
+    end
+    
+    if numIns==1 && ~strcmp(Node_name{i,1},'RVA') && ~strcmp(Node_name{i,1},'RA')
+        add_line(Heart,sprintf('Cell%d_%d/1',i,1),sprintf('Path%d/1',i)); 
+    end
 end
 
 %% Configuration input block     
-    % Block positioning
-    leftMargin=leftMargin+300;
+% Block positioning
+leftMargin=leftMargin+300;
+        
+left_corner=[leftMargin,topMargin];
+l=5; % x length
+w=(tagSpacing)*(size(Node,1)+size(Path_name,1)+1)+20; % y length
     
-    left_corner=[leftMargin,topMargin];
-    l=5; % x length
-    w=(tagSpacing)*(size(Node,1)+size(Path_name,1)+1)+20; % y length
-    
-    % Add cfg demux block
-    block_name='Cfg';
-    myblock=sprintf('%s/%s',Heart,block_name);
-    add_block('simulink/Signal Routing/Demux',myblock);
-    set_param(myblock,'Position',[left_corner(1) left_corner(2) left_corner(1)+l left_corner(2)+w]);
-    set_param(myblock,'Outputs',outputs{1});
-    
-    % Add cfg inport block
-    block_name='Cfgin';
-    myblock=sprintf('%s/%s',Heart,block_name);
-    add_block('simulink/Sources/In1',myblock);
-    x0=left_corner(1)-65; %move to the left of 65
-    y0=left_corner(2)+(w/2)-10;
-    set_param(myblock,'Position',[x0 y0 x0+50 y0+tagw]);
-    add_line(Heart,sprintf('Cfgin/1'),sprintf('Cfg/1'));
-   
-    % Add pacing inputs-----
-    left_corner(2)=left_corner(2)+w+10;
-    l=5; % x length
-    w=(tagSpacing)*2+20; % y length
-    
-    % Add pacing demux block
-    block_name1='Pacing';
-    block_name=sprintf('%s/%s',Heart,block_name1);
-    add_block('simulink/Signal Routing/Demux',block_name);
-    set_param(block_name,'Position',[left_corner(1) left_corner(2) left_corner(1)+l left_corner(2)+w]);
-    set_param(block_name,'Outputs','2');
-    
-    % Add pace inport block
-    block_name1='Pace';
-    block_name=sprintf('%s/%s',Heart,block_name1);
-    add_block('simulink/Sources/In1',block_name);
-    x0=left_corner(1)-65;
-    y0=left_corner(2)+(w/2)-10;
-    set_param(block_name,'Position',[x0 y0 x0+50 y0+tagw]);
-    add_line(Heart,sprintf('Pace/1'),sprintf('Pacing/1'));
+% Add cfg demux block
+block_name='Cfg';
+myblock=sprintf('%s/%s',Heart,block_name);
+add_block('simulink/Signal Routing/Demux',myblock);
+set_param(myblock,'Position',[left_corner(1) left_corner(2) left_corner(1)+l left_corner(2)+w]);
+set_param(myblock,'Outputs',outputs{1});
+
+% Add cfg inport block
+block_name='Cfgin';
+myblock=sprintf('%s/%s',Heart,block_name);
+add_block('simulink/Sources/In1',myblock);
+x0=left_corner(1)-65; %move to the left of 65
+y0=left_corner(2)+(w/2)-10;
+set_param(myblock,'Position',[x0 y0 x0+50 y0+tagw]);
+add_line(Heart,sprintf('Cfgin/1'),sprintf('Cfg/1'));
+
+% Add pacing inputs-----
+left_corner(2)=left_corner(2)+w+10;
+l=5; % x length
+w=(tagSpacing)*2+20; % y length
+
+% Add pacing demux block
+block_name1='Pacing';
+block_name=sprintf('%s/%s',Heart,block_name1);
+add_block('simulink/Signal Routing/Demux',block_name);
+set_param(block_name,'Position',[left_corner(1) left_corner(2) left_corner(1)+l left_corner(2)+w]);
+set_param(block_name,'Outputs','2');
+
+% Add pace inport block
+block_name1='Pace';
+block_name=sprintf('%s/%s',Heart,block_name1);
+add_block('simulink/Sources/In1',block_name);
+x0=left_corner(1)-65;
+y0=left_corner(2)+(w/2)-10;
+set_param(block_name,'Position',[x0 y0 x0+50 y0+tagw]);
+add_line(Heart,sprintf('Pace/1'),sprintf('Pacing/1'));
         
 %% Connections to the configurations of cells and paths
-    leftMargin=leftMargin+20;
+leftMargin=leftMargin+20;
 for i=1:size(Node,1)
    % Positioning
     left_corner=[leftMargin,(topMargin + (i-1) * tagSpacing)];
@@ -426,117 +427,117 @@ for i=1:size(Path_name,1)
 end  
 
 % Positioning
-    left_corner=[leftMargin,(topMargin + (size(Node,1)+size(Path_name,1)) * tagSpacing)];
-    
-     % add output tag for Leads parameters
-    out_name=sprintf('%s/Leads',Heart);
-    add_block('simulink/Signal Routing/Goto',out_name);
-    x0=left_corner(1);
-    y0=left_corner(2)+10;
-    set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]);
-    set_param(out_name,'GotoTag',sprintf('Leads'));
-    set_param(out_name,'ShowName','off');
-    add_line(Heart,sprintf('Cfg/%d',size(Path_name,1)+size(Node,1)+1),sprintf('Leads/1'));
- 
-    left_corner=[leftMargin,(topMargin + (size(Node,1)+size(Path_name,1)+1) * tagSpacing)];
-    
-   % add output tag for AP
-    out_name=sprintf('%s/APin',Heart);
-    add_block('simulink/Signal Routing/Goto',out_name);
-    x0=left_corner(1);
-    y0=left_corner(2)+35;
-    set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]);
-    set_param(out_name,'GotoTag',sprintf('AP'));
-    set_param(out_name,'ShowName','off');
-    add_line(Heart,sprintf('Pacing/%d',1),sprintf('APin/1'));
+left_corner=[leftMargin,(topMargin + (size(Node,1)+size(Path_name,1)) * tagSpacing)];
 
-    % Positioning
-    left_corner=[leftMargin,(topMargin + (size(Node,1)+size(Path_name,1)+2) * tagSpacing)];
-    
-   % add output tag for VP
-    out_name=sprintf('%s/VPin',Heart);
-    add_block('simulink/Signal Routing/Goto',out_name);
-    x0=left_corner(1);
-    y0=left_corner(2)+45;
-    set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]);
-    set_param(out_name,'GotoTag',sprintf('VP'));
-    set_param(out_name,'ShowName','off');
-    add_line(Heart,sprintf('Pacing/%d',2),sprintf('VPin/1'));
+ % add output tag for Leads parameters
+out_name=sprintf('%s/Leads',Heart);
+add_block('simulink/Signal Routing/Goto',out_name);
+x0=left_corner(1);
+y0=left_corner(2)+10;
+set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]);
+set_param(out_name,'GotoTag',sprintf('Leads'));
+set_param(out_name,'ShowName','off');
+add_line(Heart,sprintf('Cfg/%d',size(Path_name,1)+size(Node,1)+1),sprintf('Leads/1'));
+
+left_corner=[leftMargin,(topMargin + (size(Node,1)+size(Path_name,1)+1) * tagSpacing)];
+
+% add output tag for AP
+out_name=sprintf('%s/APin',Heart);
+add_block('simulink/Signal Routing/Goto',out_name);
+x0=left_corner(1);
+y0=left_corner(2)+35;
+set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]);
+set_param(out_name,'GotoTag',sprintf('AP'));
+set_param(out_name,'ShowName','off');
+add_line(Heart,sprintf('Pacing/%d',1),sprintf('APin/1'));
+
+% Positioning
+left_corner=[leftMargin,(topMargin + (size(Node,1)+size(Path_name,1)+2) * tagSpacing)];
+
+% add output tag for VP
+out_name=sprintf('%s/VPin',Heart);
+add_block('simulink/Signal Routing/Goto',out_name);
+x0=left_corner(1);
+y0=left_corner(2)+45;
+set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]);
+set_param(out_name,'GotoTag',sprintf('VP'));
+set_param(out_name,'ShowName','off');
+add_line(Heart,sprintf('Pacing/%d',2),sprintf('VPin/1'));
 
 
 
- %% Output ports
-    leftMargin=leftMargin+200;
-    % Block positioning
-    left_corner=[leftMargin,topMargin];
-    l=10;
-    w=(tagSpacing)*(size(Node,1))+20;
-    
-    % Add cellout Mux block
-    block_name1='Cell_out';
-    block_name=sprintf('%s/%s',Heart,block_name1);
-    add_block('simulink/Signal Routing/Mux',block_name);
-    set_param(block_name,'Position',[left_corner(1) left_corner(2) left_corner(1)+l left_corner(2)+w]);
-    set_param(block_name,'Inputs',num2str(size(Node,1)));   
-    set_param(block_name,'ShowName','off');
-    % Add outport block
-    block_name1='Cells_out';
-    block_name=sprintf('%s/%s',Heart,block_name1);
-    add_block('simulink/Sinks/Out1',block_name);
-    x0=left_corner(1)+25;
-    y0=left_corner(2)+(w/2)-10;
-    set_param(block_name,'Position',[x0 y0 x0+50 y0+tagw],'Port','1');
-    add_line(Heart,sprintf('Cell_out/1'),sprintf('Cells_out/1'));
-    
-    left_corner=[leftMargin,topMargin+w];
-    l=10;
-    w1=(tagSpacing)*size(Path_name,1)+20;
-    
-    % Add EGM out Mux block
-    block_name1='EGM_out';
-    block_name=sprintf('%s/%s',Heart,block_name1);
-    add_block('simulink/Math Operations/Add',block_name);
-    set_param(block_name,'Position',[left_corner(1) left_corner(2) left_corner(1)+l left_corner(2)+w1]);
-    set_param(block_name,'Inputs',num2str(size(Path_name,1)));  
-    set_param(block_name,'ShowName','off');
-    % Add outport block
-    block_name1='EGMs_out';
-    block_name=sprintf('%s/%s',Heart,block_name1);
-    add_block('simulink/Sinks/Out1',block_name);
-    x0=left_corner(1)+25;
-    y0=left_corner(2)+(w1/2)-10;
-    set_param(block_name,'Position',[x0 y0 x0+50 y0+tagw],'Port','3');
-    add_line(Heart,sprintf('EGM_out/1'),sprintf('EGMs_out/1'));
-    
-    left_corner=[leftMargin,topMargin+w+w1];
-    l=10;
-    w=(tagSpacing)*size(Path_name,1)+20; 
-    
-    % Add Wavefront Mux out block
-    block_name1='Wave_out';
-    block_name=sprintf('%s/%s',Heart,block_name1);
-    add_block('simulink/Signal Routing/Mux',block_name);
-    set_param(block_name,'Position',[left_corner(1) left_corner(2) left_corner(1)+l left_corner(2)+w]);
-    set_param(block_name,'Inputs',num2str(size(Path_name,1)));  
-    set_param(block_name,'ShowName','off');
-    % Add outport block
-    block_name1='Waves_out';
-    block_name=sprintf('%s/%s',Heart,block_name1);
-    add_block('simulink/Sinks/Out1',block_name);
-    x0=left_corner(1)+25;
-    y0=left_corner(2)+(w/2)-10;
-    set_param(block_name,'Position',[x0 y0 x0+50 y0+tagw],'Port','2');
-    add_line(Heart,sprintf('Wave_out/1'),sprintf('Waves_out/1'));
+%% Output ports
+leftMargin=leftMargin+200;
+% Block positioning
+left_corner=[leftMargin,topMargin];
+l=10;
+w=(tagSpacing)*(size(Node,1))+20;
+
+% Add cellout Mux block
+block_name1='Cell_out';
+block_name=sprintf('%s/%s',Heart,block_name1);
+add_block('simulink/Signal Routing/Mux',block_name);
+set_param(block_name,'Position',[left_corner(1) left_corner(2) left_corner(1)+l left_corner(2)+w]);
+set_param(block_name,'Inputs',num2str(size(Node,1)));   
+set_param(block_name,'ShowName','off');
+% Add outport block
+block_name1='Cells_out';
+block_name=sprintf('%s/%s',Heart,block_name1);
+add_block('simulink/Sinks/Out1',block_name);
+x0=left_corner(1)+25;
+y0=left_corner(2)+(w/2)-10;
+set_param(block_name,'Position',[x0 y0 x0+50 y0+tagw],'Port','1');
+add_line(Heart,sprintf('Cell_out/1'),sprintf('Cells_out/1'));
+
+left_corner=[leftMargin,topMargin+w];
+l=10;
+w1=(tagSpacing)*size(Path_name,1)+20;
+
+% Add EGM out Mux block
+block_name1='EGM_out';
+block_name=sprintf('%s/%s',Heart,block_name1);
+add_block('simulink/Math Operations/Add',block_name);
+set_param(block_name,'Position',[left_corner(1) left_corner(2) left_corner(1)+l left_corner(2)+w1]);
+set_param(block_name,'Inputs',num2str(size(Path_name,1)));  
+set_param(block_name,'ShowName','off');
+% Add outport block
+block_name1='EGMs_out';
+block_name=sprintf('%s/%s',Heart,block_name1);
+add_block('simulink/Sinks/Out1',block_name);
+x0=left_corner(1)+25;
+y0=left_corner(2)+(w1/2)-10;
+set_param(block_name,'Position',[x0 y0 x0+50 y0+tagw],'Port','3');
+add_line(Heart,sprintf('EGM_out/1'),sprintf('EGMs_out/1'));
+
+left_corner=[leftMargin,topMargin+w+w1];
+l=10;
+w=(tagSpacing)*size(Path_name,1)+20; 
+
+% Add Wavefront Mux out block
+block_name1='Wave_out';
+block_name=sprintf('%s/%s',Heart,block_name1);
+add_block('simulink/Signal Routing/Mux',block_name);
+set_param(block_name,'Position',[left_corner(1) left_corner(2) left_corner(1)+l left_corner(2)+w]);
+set_param(block_name,'Inputs',num2str(size(Path_name,1)));  
+set_param(block_name,'ShowName','off');
+% Add outport block
+block_name1='Waves_out';
+block_name=sprintf('%s/%s',Heart,block_name1);
+add_block('simulink/Sinks/Out1',block_name);
+x0=left_corner(1)+25;
+y0=left_corner(2)+(w/2)-10;
+set_param(block_name,'Position',[x0 y0 x0+50 y0+tagw],'Port','2');
+add_line(Heart,sprintf('Wave_out/1'),sprintf('Waves_out/1'));
 %% Connect cells/ToProbe to the output ports
 
 leftMargin=leftMargin-90;
 
 for i=1:size(Node,1)
-   % Positioning
+    % Positioning
     
     left_corner=[leftMargin,(topMargin + (i-1) * tagSpacing)];
     
-   % add output tag for Node parameters
+    % add output tag for Node parameters
     out_name=sprintf('%s/Cell%d',Heart,i);
     add_block('simulink/Signal Routing/From',out_name);
     x0=left_corner(1);
@@ -548,10 +549,10 @@ for i=1:size(Node,1)
        
 end
 for i=1:size(Path_name,1)
-   % Positioning
+    % Positioning
     left_corner=[leftMargin,(topMargin + (size(Node,1)+i) * tagSpacing)];
     
-   % add output tag for Path parameters
+    % add output tag for Path parameters
     out_name=sprintf('%s/EGM%d',Heart,i);
     add_block('simulink/Signal Routing/From',out_name);
     x0=left_corner(1);
@@ -563,10 +564,10 @@ for i=1:size(Path_name,1)
 end 
 
 for i=1:size(Path_name,1)
-   % Positioning
+    % Positioning
     left_corner=[leftMargin,(topMargin + (size(Node,1)+size(Path_name,1)+i+1) * tagSpacing)];
     
-   % add output tag for Node parameters
+    % add output tag for Node parameters
     out_name=sprintf('%s/Wave%d',Heart,i);
     add_block('simulink/Signal Routing/From',out_name);
     x0=left_corner(1);
@@ -576,6 +577,71 @@ for i=1:size(Path_name,1)
     set_param(out_name,'ShowName','off');
     add_line(Heart,sprintf('Wave%d/1',i),sprintf('Wave_out/%d',i));
 end
+
+if standalone 
+    % Building I/O connections for the heart model
+    ports = get_param(Heart,"PortHandles");
+
+    % Outputs
+    x0=left_corner_static(1)+sub_size(1)+50;
+    y0=left_corner_static(2)+(sub_size(2)/4)+10;
+
+    out_name=sprintf('%s/FileOutput',HeartModel);
+    add_block('simulink/Sinks/To File',out_name)
+    set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]);
+    set_param(out_name,'FileName',sprintf('Cells_%s_output.mat',HeartModel))
+    dst = get_param(out_name,"PortHandles");
+    add_line(HeartModel,ports.Outport(1),dst.Inport(1))
+    set_param(out_name,'ShowName','off');
+    
+    y0=left_corner_static(2)+(sub_size(2)/2)+10;
+    out_name=sprintf('%s/Terminator1',HeartModel);
+    add_block('simulink/Sinks/Terminator',out_name)
+    set_param(out_name,'Position',[x0 y0 x0+0.5*tagl y0+tagw]);
+    dst = get_param(out_name,"PortHandles");
+    add_line(HeartModel,ports.Outport(2),dst.Inport(1))
+    
+    y0=left_corner_static(2)+(3*sub_size(2)/4)-10;
+    out_name=sprintf('%s/Terminator2',HeartModel);
+    add_block('simulink/Sinks/Terminator',out_name)
+    set_param(out_name,'Position',[x0 y0 x0+0.5*tagl y0+tagw]);
+    dst = get_param(out_name,"PortHandles");
+    add_line(HeartModel,ports.Outport(3),dst.Inport(1))
+    
+    % Inputs
+    x0=left_corner_static(1)-100;
+    cfgs_lib = [systempath, filesep 'HeartCFGs'];
+    load_system(cfgs_lib)
+    
+    y0=left_corner_static(2)+(sub_size(2)/4);
+    out_name=sprintf('%s/cfgs',HeartModel);
+    add_block('HeartCFGs/cfgs',out_name)
+    set_param(out_name,'Position',[x0 y0 x0+tagl y0+tagw]);
+    src = get_param(out_name,"PortHandles");
+    add_line(HeartModel,src.Outport(1),ports.Inport(1))
+    
+    % TO ADD:
+       % option to have a pacemaker input into the heart 
+    
+    y0=left_corner_static(2)+(3*sub_size(2)/4);
+    out_name=sprintf('%s/Constant',HeartModel);
+    add_block('simulink/Sources/Constant',out_name)
+    set_param(out_name,'Position',[x0 y0 x0+0.25*tagl y0+tagw]);
+    set_param(out_name,'ShowName','off');
+    set_param(out_name,'Value','0')
+    src = get_param(out_name,"PortHandles");
+    
+    x0=left_corner_static(1)-50;
+    out_name=sprintf('%s/Mux',HeartModel);
+    add_block('simulink/Signal Routing/Mux',out_name)
+    set_param(out_name,'Position',[x0 y0 x0+0.1*tagl y0+tagw]);
+    set_param(out_name,'ShowName','off');
+    dst = get_param(out_name,"PortHandles");
+    add_line(HeartModel,src.Outport(1),dst.Inport(1))
+    add_line(HeartModel,src.Outport(1),dst.Inport(2))
+    add_line(HeartModel,dst.Outport(1),ports.Inport(2))
+end
+
 save_system(HeartModel, [systempath,filesep,HeartModel]);
 
 bdclose('all'); %closes any open Simulink windows

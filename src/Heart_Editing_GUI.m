@@ -1,19 +1,17 @@
-function Heart_Editing_GUI(mdl,modelName,filename,savepath,nodes_name,probes_name,model_params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale)
+function Heart_Editing_GUI(filename,nodes_name,probes_name,model_params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale)
 % Copyright 2025 Ben Allen.
 % This program is released under license GPL version 3.
 close all
 global nodes_name
 global probes_name
-global node_atts_copy % Create unique rows for path creation
-global path_atts_copy % Create unique rows for path creation
+global node_atts_copy 
+global path_atts_copy 
 global node_atts
 global path_atts
 global model_params
 global timescale
 %% GUI
 global ConfigGUI
-% How to convert cell array into just the numerical values
-%ConfigGUI.path_presets = unique(path_atts_copy{2:55,5:15})
 node_temp = cell2mat(node_atts_copy(2:44,3:50));
 node_temp(:,45:46)=40000;
 node_temp(isnan(node_temp))=40000;
@@ -78,7 +76,7 @@ for idx=1:length(strings)
         'Tag',tags{idx});
 end
 % Current position
-ConfigGUI.setp=scatter(ConfigGUI.TOP_axe,[],[],'LineWidth',1.5,'Marker','o','CData',[1 0 0]);
+ConfigGUI.setp=scatter(ConfigGUI.TOP_axe,[],[],'LineWidth',1.5,'Marker','^','CData',[1 0 1]);
 uicontrol('Parent',ConfigGUI.Handle,...
     'Style','text',...
     'Units','normalized',...
@@ -309,7 +307,7 @@ ConfigGUI.nodename = uicontrol('Parent',ConfigGUI.node_create,...
     'Units','normalized',...
     'Position',[0.35 0.8 0.15 0.1],...
     'BackgroundColor', get(ConfigGUI.Handle,'Color'),...
-    'String','New_Cell',...
+    'String','NewCell_1',...
     'HandleVisibility','callback',...
     'Tag','nodepreset');
 % 2. Select which preset to use as a base
@@ -343,11 +341,11 @@ for idx = 1:length(strings)
         'HandleVisibility','callback');
 end
 ConfigGUI.nodecheck = false;
-strings = {'Select Node','Delete Node', 'Cancel Node Deletion'}; 
+strings = {'Select Node for Deletion','Delete Node', 'Cancel Node Deletion'}; 
 left_positions = [0.25 0.5 0.75];
 bot_positions = [0.5 0.5 0.5];
 h_positions = [0.15 0.15 0.15];
-w_positions = [0.15 0.15 0.15];
+w_positions = [0.25 0.15 0.15];
 tags = {'selectnodedel','delnode','cancelnodedel'};
 callbacks = {@nodeSelect,@deleteNode,@nodeCancelDel};
 enabled ={'on','off','off'};
@@ -441,11 +439,11 @@ end
 
 ConfigGUI.pathfirst2 = true;
 ConfigGUI.pathcheck = false;
-strings = {'Select Path','Delete Path', 'Cancel Deletion'}; 
+strings = {'Select Path for Deletion','Delete Path', 'Cancel Deletion'}; 
 left_positions = [0.25 0.5 0.75];
 bot_positions = [0.5 0.5 0.5];
 h_positions = [0.15 0.15 0.15];
-w_positions = [0.15 0.15 0.15];
+w_positions = [0.25 0.15 0.15];
 tags = {'selectpathdel','delpath', 'cancelpathdel'};
 callbacks = {@pathSelect,@deletePath, @pathCancelDel};
 enabled ={'on','off', 'off'};
@@ -462,9 +460,14 @@ for idx = 1:length(strings)
         'HandleVisibility','callback',...
         'Tag',tags{idx});
 end
+ConfigGUI.path_ind_visual = 0;
+ConfigGUI.pathind = 0;
+ConfigGUI.ind1 = 0;
+ConfigGUI.ind2 = 0;
+ConfigGUI.node1ind = 0;
+ConfigGUI.node2ind = 0;
 %Load the default model
 load_model(filename);
-%%% SET THE node/path details?????
 waitfor(ConfigGUI.Handle);
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -484,6 +487,7 @@ if ~isempty(ConfigGUI.Node_pos)
     for n=1:length(ConfigGUI.Node_pos(:,1))
         text(ConfigGUI.TOP_axe,ConfigGUI.Node_pos(n,1),ConfigGUI.Node_pos(n,2)+2,int2str(n),'Color','blue','FontSize',12,'tag',sprintf('cell%i',n));
     end
+    ConfigGUI.node_connections = 1:length(ConfigGUI.Node_pos);
 else
     error('The node position is empty.');
     exit;
@@ -503,7 +507,7 @@ for n=1:size(dim.Path,1)
         [dim.Node_pos(dim.Path(n,1),2),dim.Node_pos(dim.Path(n,2),2)],'LineWidth',1.5,'Color',[0 0 0],...
         'Parent',ConfigGUI.TOP_axe,'tag',sprintf('path%i',n));
 end
-
+ConfigGUI.path_connections = [1:size(dim.Path,1).'; dim.Path(:,1).'; dim.Path(:,2).'].';
 % Create the legend
 legend([ConfigGUI.node_pos,ConfigGUI.probe_pos],{'Node','Probe'});
 I = imread('heartoutline.jpg'); 
@@ -529,7 +533,9 @@ end
 function localNodeAttrClick(hObject,eventdata)
 global ConfigGUI
 global node_atts
-set(ConfigGUI.getnodeatt,'String',sprintf('%f',node_atts{ConfigGUI.ind1+1,ConfigGUI.nodeatt.Value+2}));
+if ConfigGUI.ind1 ~= 0
+    set(ConfigGUI.getnodeatt,'String',sprintf('%f',node_atts{ConfigGUI.ind1+1,ConfigGUI.nodeatt.Value+2}));
+end
 drawnow update;
 end
 
@@ -595,7 +601,7 @@ time = qv.APvoltage.time;
 trace = qv.APvoltage.data;
 close_system(test)
 delete(findobj('tag','myAlteredTrace'))
-line(ConfigGUI.AP_nodetrace,time,trace,'color',[1 0 0],'LineWidth',2,'tag','myAlteredTrace')
+line(ConfigGUI.AP_nodetrace,time,trace,'color',[0 1 0],'LineWidth',2,'tag','myAlteredTrace')
 hold on;
 % plot the current nodes model trace
 if strcmp('N',node_atts_copy(ConfigGUI.ind1+1,1))
@@ -634,7 +640,9 @@ end
 function localPathAttrClick(hObject,eventdata)
 global ConfigGUI
 global path_atts
-set(ConfigGUI.getpathatt,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,ConfigGUI.pathatt.Value+4}));
+if ConfigGUI.pathind ~= 0
+    set(ConfigGUI.getpathatt,'String',sprintf('%f',path_atts{ConfigGUI.pathind+1,ConfigGUI.pathatt.Value+4}));
+end
 drawnow update;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -714,7 +722,6 @@ type_node = type_node{1};
 atts = ConfigGUI.node_presets(ConfigGUI.nodepreset.Value,:);
 atts(45:46) = [x y];
 % Save the new nodes attributes in the correct arrays 
-% TO CHECK: assignin use?
 temp = nodes_name;
 temp(end+1,:) = [{ConfigGUI.nodename.String} type_node];
 assignin('base','nodes_name',temp)
@@ -724,6 +731,7 @@ assignin('base','node_atts',temp)
 temp = node_atts_copy;
 temp(end+1,:) = [type_node n num2cell(atts)];
 assignin('base','node_atts_copy',temp)
+ConfigGUI.node_connections(end+1)=n;
 b = findobj('tag','selectlocation');
 b.Enable = 'on';
 b = findobj('tag','savenode');
@@ -756,12 +764,21 @@ end
 function nodeCancelDel(hObject,eventdata)
 global ConfigGUI
 c = get(ConfigGUI.node_pos,'CData');
-color = [0 0 1];        
+color = [1 0 0];        
 [q, idx] = ismember(color,c,'rows');
 if q
-    c(idx,:) = [0 0 0];
+    if(idx == ConfigGUI.ind1)
+        c(idx,:) = [0 0 1];
+    elseif (idx == ConfigGUI.node1ind)
+        c(idx,:) = [1 1 0];
+    elseif(idx == ConfigGUI.node2ind)
+        c(idx,:) = [1 0 1];
+    else
+        c(idx,:) = [0 0 0];
+    end
 end
 set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
+ConfigGUI.ind2 = 0;
 b = findobj('tag','delnode');
 b.Enable = 'off';
 b = findobj('tag','selectnodedel');
@@ -777,8 +794,36 @@ global nodes_name
 global node_atts_copy
 global path_atts
 global path_atts_copy
+% Checks if theres an overlap with other tabs
+if ConfigGUI.ind1 == ConfigGUI.ind2
+    set(ConfigGUI.nodecurr,'String','N/A');
+    set(ConfigGUI.nodetypecurr,'String','N/A');
+    set(ConfigGUI.getnodeatt,'String','N/A');
+    b = findobj('tag','selectnode');
+    b.Enable = 'on';
+    b = findobj('tag','reset');
+    b.Enable = 'off';
+    b = findobj('tag','attrupdate');
+    b.Enable = 'off';
+    b = findobj('tag','plotnodetrace');
+    b.Enable = 'off';        
+    ConfigGUI.ind1 = 0;
+end
+if ConfigGUI.ind2 == ConfigGUI.node1ind
+    set(ConfigGUI.node1path, 'String', 'N/A');      
+    b = findobj('tag','savepath');
+    b.Enable = 'off';
+    ConfigGUI.node1ind = 0;
+end
+if ConfigGUI.ind2 == ConfigGUI.node2ind
+    set(ConfigGUI.node2path, 'String', 'N/A');       
+    b = findobj('tag','savepath');
+    b.Enable = 'off';
+    ConfigGUI.node2ind = 0;
+end
 % Delete the node physically from the plot
 ConfigGUI.Node_pos(ConfigGUI.ind2,:) = [];
+ConfigGUI.node_connections(ConfigGUI.ind2) = [];
 c = get(ConfigGUI.node_pos,'CData');
 c(ConfigGUI.ind2,:) = [];
 set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
@@ -787,30 +832,43 @@ true_index = node_atts{ConfigGUI.ind2+1,2};
 partial1 =[node_atts{2:end,2}].';
 [index1,~] = find(partial1 == true_index);
 index1 = index1+1;
-% TO CHECK: assignin use? - 
 node_atts(index1,:) = [];
 node_atts_copy(index1,:) = [];
 nodes_name(index1,:) = [];
 delete(findobj('tag',sprintf('cell%i',true_index)));
-% TO DEBUG: increased deleting of nodes starts randomly deleting other
-% paths
-% PROBLEM: Node_pos/path_plot differential paths possibly??
-% PATH DELETION IS THE ISSUE - checked with commenting out the following
-% statements and deleting nodes continuously 25/06
+% Delete the paths connected to the node being deleted
 partial1 =[path_atts{2:end,3}; path_atts{2:end,4}].';
-[index1,~] = find(partial1 == true_index)
+[index1,~] = find(partial1 == true_index);
+[index_visual,~] = find(ConfigGUI.path_connections(:,2:end) == true_index);
 
-delete(ConfigGUI.path_plot(index1))
-for idx =1:length(index1)
-    delete(findobj('tag',sprintf('path%i',idx)));
+delete(ConfigGUI.path_plot(ConfigGUI.path_connections(index_visual)))
+for idx =1:length(index_visual)
+    delete(findobj('tag',sprintf('path%i',ConfigGUI.path_connections(index_visual))));
 end
+
+if ismember(ConfigGUI.path_ind_visual,index_visual)
+    p = findobj('tag','selectpathdel');
+    p.Enable = 'on'; 
+    p = findobj('tag', 'cancelpathdel');
+    p.Enable = 'off';
+    p = findobj('tag','delpath');
+    p.Enable = 'off';       
+    ConfigGUI.path_ind_visual = 0;
+end
+if ismember(ConfigGUI.pathind,index_visual)
+    ConfigGUI.firsttime_path = true;
+    ConfigGUI.pathind = 0;
+end
+ConfigGUI.path_connections(index_visual,:) = [];
 index1 = index1+1;
 path_atts(index1,:) = [];
 path_atts_copy(index1,:) = [];
+ConfigGUI.ind2 = 0;
 b = findobj('tag','delnode');
 b.Enable = 'off';
 b = findobj('tag','cancelnodedel');
 b.Enable = 'off';
+drawnow update;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -842,6 +900,7 @@ global nodes_name
 ConfigGUI.path_plot(end+1)=line([ConfigGUI.Node_pos(ConfigGUI.node1ind,1),ConfigGUI.Node_pos(ConfigGUI.node2ind,1)],...
  [ConfigGUI.Node_pos(ConfigGUI.node1ind,2),ConfigGUI.Node_pos(ConfigGUI.node2ind,2)],'LineWidth',1.5,'Color',[0 0 0],...
  'Parent',ConfigGUI.TOP_axe,'tag',sprintf('path%i',length(ConfigGUI.path_plot)+1));
+ConfigGUI.path_connections(end+1,:) = [ConfigGUI.path_connections(end,1), ConfigGUI.node1ind, ConfigGUI.node2ind];
 legend([ConfigGUI.node_pos,ConfigGUI.probe_pos],{'Node','Probe'});
 atts = ConfigGUI.path_presets(ConfigGUI.pathpreset.Value,:);
 x1 = ConfigGUI.Node_pos(ConfigGUI.node1ind,1);
@@ -866,12 +925,24 @@ c = get(ConfigGUI.node_pos,'CData');
 color = [1 1 0];        
 [q, idx] = ismember(color,c,'rows');
 if q
-    c(idx,:) = [0 0 0];
+    if (idx == ConfigGUI.ind1)
+        c(idx,:) = [0 0 1];
+    elseif (idx == ConfigGUI.ind2)
+        c(idx,:) = [1 0 0];
+    else
+        c(idx,:) = [0 0 0];
+    end
 end
-color = [0 1 0];        
+color = [1 0 1];     
 [q, idx] = ismember(color,c,'rows');
 if q
-    c(idx,:) = [0 0 0];
+    if (idx == ConfigGUI.ind1)
+        c(idx,:) = [0 0 1];
+    elseif (idx == ConfigGUI.ind2)
+        c(idx,:) = [1 0 0];
+    else
+        c(idx,:) = [0 0 0];
+    end
 end
 set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
 p = findobj('tag','savepath');
@@ -886,12 +957,24 @@ c = get(ConfigGUI.node_pos,'CData');
 color = [1 1 0];        
 [q, idx] = ismember(color,c,'rows');
 if q
-    c(idx,:) = [0 0 0];
+    if (idx == ConfigGUI.ind1)
+        c(idx,:) = [0 0 1];
+    elseif (idx == ConfigGUI.ind2)
+        c(idx,:) = [1 0 0];
+    else
+        c(idx,:) = [0 0 0];
+    end
 end
-color = [0 1 0];        
+color = [1 0 1];     
 [q, idx] = ismember(color,c,'rows');
 if q
-    c(idx,:) = [0 0 0];
+    if (idx == ConfigGUI.ind1)
+        c(idx,:) = [0 0 1];
+    elseif(idx == ConfigGUI.ind2)
+        c(idx,:) = [1 0 0];
+    else
+        c(idx,:) = [0 0 0];
+    end
 end
 set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
 set(ConfigGUI.node2path, 'String', 'N/A');
@@ -908,17 +991,26 @@ ConfigGUI.pathcheck = true;
 p = findobj('tag','selectpathdel');
 p.Enable = 'off';        
 end
-% Selecting path to delete it 
+% Cancel the current deletion process
 function pathCancelDel(hObject,eventdata)
 global ConfigGUI
 global path_atts
-ConfigGUI.path_plot(ConfigGUI.pathind1)=line([ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,3},1),...
-    ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,4},1)],...
-    [ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,3},2),...
-    ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,4},2)],'LineWidth',1.5,'Color',[0 0 0],...
-    'Parent',ConfigGUI.TOP_axe,'tag',sprintf('path%i',ConfigGUI.pathind1));
+[node1idx,~] = find(ConfigGUI.node_connections.' == path_atts{ConfigGUI.pathind1+1,3});
+[node2idx,~] = find(ConfigGUI.node_connections.' == path_atts{ConfigGUI.pathind1+1,4});
+delete(ConfigGUI.path_plot(ConfigGUI.path_ind_visual))
+delete(findobj('tag',sprintf('path%i',ConfigGUI.path_ind_visual)))
+if ConfigGUI.pathind == ConfigGUI.path_ind_visual
+    colour = [0 0 1];
+else
+    colour = [0 0 0];
+end
+ConfigGUI.path_plot(ConfigGUI.path_ind_visual)=line([ConfigGUI.Node_pos(node1idx,1),...
+    ConfigGUI.Node_pos(node2idx,1)],...
+    [ConfigGUI.Node_pos(node1idx,2),...
+    ConfigGUI.Node_pos(node2idx,2)],'LineWidth',1.5,'Color',colour,...
+    'Parent',ConfigGUI.TOP_axe,'tag',sprintf('path%i',ConfigGUI.path_ind_visual));
 legend([ConfigGUI.node_pos,ConfigGUI.probe_pos],{'Node','Probe'});
-drawnow update;
+ConfigGUI.path_ind_visual = 0;
 p = findobj('tag','selectpathdel');
 p.Enable = 'on'; 
 p = findobj('tag', 'cancelpathdel');
@@ -931,9 +1023,24 @@ function deletePath(hObject,eventdata)
 global ConfigGUI
 global path_atts
 global path_atts_copy
-% TO DEBUG: deleting too much starts to create chaos
-delete(ConfigGUI.path_plot(ConfigGUI.pathind1))
-delete(findobj('tag',sprintf('path%i',ConfigGUI.pathind1)));
+if ConfigGUI.path_ind_visual == ConfigGUI.pathind
+    ConfigGUI.firsttime_path = true;
+    set(ConfigGUI.node1curr, 'String','N/A');
+    set(ConfigGUI.node2curr, 'String','N/A');
+    set(ConfigGUI.getpathatt,'String','N/A');
+    set(ConfigGUI.adelay,'String','N/A');
+    set(ConfigGUI.rdelay,'String','N/A');
+    ConfigGUI.pathind = 0;
+    p = findobj('tag','selectpath');
+    p.Enable = 'on';
+    p = findobj('tag','pathval');
+    p.Enable = 'off';
+    p = findobj('tag','pathvalreset');
+    p.Enable = 'off';
+
+end
+delete(ConfigGUI.path_plot(ConfigGUI.path_ind_visual))
+delete(findobj('tag',sprintf('path%i',ConfigGUI.path_ind_visual)));
 temp = path_atts;
 temp(ConfigGUI.pathind1+1,:) = [];
 assignin('base','path_atts',temp);
@@ -957,10 +1064,22 @@ function saveGUI(hObject,eventdata)
 global ConfigGUI
 global path_atts
 global node_atts
+global nodes_name
+global probes_name
+global timescale
 %%% Save the model updates and empty any arrays
-% TO ADD: Save the path_atts and node_atts to files (nonspecific naming, to then
-% use in the full model) call PreBuild or other setup function
 close all
+model.node_atts=node_atts;
+model.nodes_name=nodes_name;
+model.path_atts=path_atts;
+model.probes=probes_name;
+if strcmp('sec',timescale)
+    PreBuild_unified(true,model)
+elseif strcmp('msec',timescale)
+    PreBuild_unified(false,model)
+else
+    disp('Continuing with original, function failed')
+end
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function closeGUI(hObject,eventdata)
@@ -1006,18 +1125,31 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
             back_color = [1 .8 .8];
         end
     else
-        str = append('Probe: ',int2str(ind2),' = ', probes_name(ind2+1));
+        str = append('Probe: ',int2str(ind2),' = ', probes_name(ind2+1,1));
         back_color = [.75 .75 .75];
     end
+    % Display information for the node
+    delete(findobj('tag','mytooltip'))
+    text(curX+xoffset,curY+yoffset,str,...
+        'backgroundcolor',back_color,'tag','mytooltip','edgecolor',[0 0 0],...
+        'hittest','off')
 
     if ConfigGUI.nodesetcheck %for editing a node
         ConfigGUI.ind1 = ind1;
         %set the node information based on nearest node
         c = get(ConfigGUI.node_pos,'CData');
-        color = [1 0 0];        
+        color = [0 0 1];        
         [q, idx] = ismember(color,c,'rows');
-        if q
-            c(idx,:) = [0 0 0];
+        if q %ConfigGUI.ind1 previous
+            if idx == ConfigGUI.ind2
+                c(idx,:) = [1 0 0];
+            elseif idx == ConfigGUI.node1ind
+                c(idx,:) = [1 1 0];
+            elseif idx == ConfigGUI.node2ind
+                c(idx,:) = [1 0 1];
+            else
+                c(idx,:) = [0 0 0];
+            end
         end
         c(ind1,:) = color;
         set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
@@ -1037,10 +1169,18 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         ConfigGUI.ind2 = ind1;
         %set the node information based on nearest node
         c = get(ConfigGUI.node_pos,'CData');
-        color = [0 0 1];        
+        color = [1 0 0];        
         [q, idx] = ismember(color,c,'rows');
-        if q
-            c(idx,:) = [0 0 0];
+        if q %ConfigGUI.ind2 previous
+            if idx == ConfigGUI.ind1
+                c(idx,:) = [0 0 1];
+            elseif idx == ConfigGUI.node1ind
+                c(idx,:) = [1 1 0];
+            elseif idx == ConfigGUI.node2ind
+                c(idx,:) = [1 0 1];
+            else
+                c(idx,:) = [0 0 0];
+            end
         end
         c(ind1,:) = color;
         set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
@@ -1058,31 +1198,46 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         y_temp = get(ConfigGUI.node_pos,'YData');
         x_temp(end+1) = curX;
         y_temp(end+1) = curY;
-        c(end+1,:) = [1 0 1];
+        c(end+1,:) = [0 1 0];
         set(ConfigGUI.node_pos,'XData',x_temp,'YData',y_temp,'CData',c);
         ConfigGUI.selectlocal = false;
-        b = findobj('tag','savenode');
-        b.Enable = 'on';
+        if ~ismember(ConfigGUI.nodename.String,nodes_name)
+            b = findobj('tag','savenode');
+            b.Enable = 'on';
+        end
         b = findobj('tag','cancelnode');
         b.Enable = 'on';
+        delete(findobj('tag','mytooltip'))
 
     end
     if ConfigGUI.pathsetcheck
         %set the path information based on nearest two nodes
         if ~ConfigGUI.firsttime_path
-            ConfigGUI.path_plot(ConfigGUI.pathind)=line([ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,3},1),...
-                ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,4},1)],...
-                [ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,3},2),...
-                ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,4},2)],'LineWidth',1.5,'Color',[0 0 0],...
+            node1idx = find(ConfigGUI.node_connections.' == path_atts{ConfigGUI.pathind+1,3});
+            node2idx = find(ConfigGUI.node_connections.' == path_atts{ConfigGUI.pathind+1,4});
+            delete(ConfigGUI.path_plot(ConfigGUI.pathind))
+            delete(findobj('tag',sprintf('path%i',ConfigGUI.pathind)))
+            if ConfigGUI.pathind == ConfigGUI.path_ind_visual
+                colour = [1 0 0];
+            else
+                colour = [0 0 0];
+            end
+            ConfigGUI.path_plot(ConfigGUI.pathind)=line([ConfigGUI.Node_pos(node1idx,1),...
+                ConfigGUI.Node_pos(node2idx,1)],...
+                [ConfigGUI.Node_pos(node1idx,2),ConfigGUI.Node_pos(node2idx,2)],'LineWidth',1.5,'Color',colour,...
                 'Parent',ConfigGUI.TOP_axe,'tag',sprintf('path%i',ConfigGUI.pathind));
+            
         else
             ConfigGUI.firsttime_path = false;
         end
         ConfigGUI.pathind = nearest_line([curX,curY]);
-        ConfigGUI.path_plot(ConfigGUI.pathind)=line([ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,3},1),...
-            ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,4},1)],...
-            [ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,3},2),...
-            ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind+1,4},2)],'LineWidth',1.5,'Color',[1 0 0],...
+        node1idx = find(ConfigGUI.node_connections.' == path_atts{ConfigGUI.pathind+1,3});
+        node2idx = find(ConfigGUI.node_connections.' == path_atts{ConfigGUI.pathind+1,4});
+        delete(ConfigGUI.path_plot(ConfigGUI.pathind))
+        delete(findobj('tag',sprintf('path%i',ConfigGUI.pathind)))
+        ConfigGUI.path_plot(ConfigGUI.pathind)=line([ConfigGUI.Node_pos(node1idx,1),...
+            ConfigGUI.Node_pos(node2idx,1)],...
+            [ConfigGUI.Node_pos(node1idx,2),ConfigGUI.Node_pos(node2idx,2)],'LineWidth',1.5,'Color',[0 0 1],...
             'Parent',ConfigGUI.TOP_axe,'tag',sprintf('path%i',ConfigGUI.pathind));
         legend([ConfigGUI.node_pos,ConfigGUI.probe_pos],{'Node','Probe'});
         set(ConfigGUI.node1curr, 'String', sprintf('%s (%i)',path_atts{ConfigGUI.pathind+1,1},path_atts{ConfigGUI.pathind+1,3}));
@@ -1097,13 +1252,20 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         p.Enable = 'on';
         p = findobj('tag','pathvalreset');
         p.Enable = 'on';
+        delete(findobj('tag','mytooltip'))        
     elseif ConfigGUI.pathcheck % for deleting the path
         ConfigGUI.pathind1 = nearest_line([curX,curY]);
-        ConfigGUI.path_plot(ConfigGUI.pathind1)=line([ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,3},1),...
-            ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,4},1)],...
-            [ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,3},2),...
-            ConfigGUI.Node_pos(path_atts{ConfigGUI.pathind1+1,4},2)],'LineWidth',1.5,'Color',[0 0 1],...
-            'Parent',ConfigGUI.TOP_axe);
+        pathvis = find(ismember(ConfigGUI.path_connections(:,2:end), ...
+            [path_atts{ConfigGUI.pathind1+1,3},path_atts{ConfigGUI.pathind1+1,4}],'row'));
+        ConfigGUI.path_ind_visual = ConfigGUI.path_connections(pathvis,1);
+        node1idx = find(ConfigGUI.node_connections.' == path_atts{ConfigGUI.pathind1+1,3});
+        node2idx = find(ConfigGUI.node_connections.' == path_atts{ConfigGUI.pathind1+1,4});
+        delete(ConfigGUI.path_plot(ConfigGUI.path_ind_visual))
+        delete(findobj('tag',sprintf('path%i',ConfigGUI.path_ind_visual)))
+        ConfigGUI.path_plot(ConfigGUI.path_ind_visual)=line([ConfigGUI.Node_pos(node1idx,1),...
+            ConfigGUI.Node_pos(node2idx,1)],...
+            [ConfigGUI.Node_pos(node1idx,2),ConfigGUI.Node_pos(node2idx,2)],'LineWidth',1.5,'Color',[1 0 0],...
+            'Parent',ConfigGUI.TOP_axe,'tag',sprintf('path%i',ConfigGUI.path_ind_visual));
         legend([ConfigGUI.node_pos,ConfigGUI.probe_pos],{'Node','Probe'});
         ConfigGUI.pathcheck = false;
         p = findobj('tag','selectpathdel');
@@ -1112,14 +1274,23 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         p.Enable = 'on';
         p = findobj('tag','cancelpathdel');
         p.Enable = 'on';
+        delete(findobj('tag','mytooltip'))
     end
     if ConfigGUI.node1set
         ConfigGUI.node1ind = ind1;
         c = get(ConfigGUI.node_pos,'CData');
-        color = [0 1 0];        
+        color = [1 1 0];        
         [q, idx] = ismember(color,c,'rows');
-        if q
-            c(idx,:) = [0 0 0];
+        if q %ConfigGUI.node1ind previous
+            if idx == ConfigGUI.ind1
+                c(idx,:) = [0 0 1];
+            elseif idx == ConfigGUI.ind2
+                c(idx,:) = [1 0 0];
+            elseif idx == ConfigGUI.node2ind
+                c(idx,:) = [1 0 1];
+            else
+                c(idx,:) = [0 0 0];
+            end
         end
         c(ind1,:) = color;
         set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
@@ -1131,18 +1302,26 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         p = findobj('tag','cancelpath');
         p.Enable = 'on';       
         ConfigGUI.node1set = false;
-        save_var = get(ConfigGUI.node2path, 'String');
-        if ~strcmp(save_var,'N/A')
+        if ~strcmp(ConfigGUI.node2path.String,'N/A') & ...
+                ~strcmp(ConfigGUI.node1path.String,ConfigGUI.node2path.String)
             b = findobj('tag','savepath');
             b.Enable = 'on';
         end
     elseif ConfigGUI.node2set
         ConfigGUI.node2ind = ind1;
         c = get(ConfigGUI.node_pos,'CData');
-        color = [1 1 0];        
+        color = [1 0 1];        
         [q, idx] = ismember(color,c,'rows');
-        if q
-            c(idx,:) = [0 0 0];
+        if q %ConfigGUI.node2ind previous
+            if idx == ConfigGUI.ind1
+                c(idx,:) = [0 0 1];
+            elseif idx == ConfigGUI.ind2
+                c(idx,:) = [1 0 0];
+            elseif idx == ConfigGUI.node1ind
+                c(idx,:) = [1 1 0];
+            else
+                c(idx,:) = [0 0 0];
+            end
         end
         c(ind1,:) = color;
         set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
@@ -1154,17 +1333,12 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
         p = findobj('tag','cancelpath');
         p.Enable = 'on';        
         ConfigGUI.node2set = false;
-        save_var = get(ConfigGUI.node1path, 'String');
-        if ~strcmp(save_var,'N/A')
+        if ~strcmp(ConfigGUI.node1path.String,'N/A') & ...
+                ~strcmp(ConfigGUI.node1path.String,ConfigGUI.node2path.String)
             b = findobj('tag','savepath');
             b.Enable = 'on';
         end
     end
-    % Display information for the node
-    delete(findobj('tag','mytooltip'))
-    text(curX+xoffset,curY+yoffset,str,...
-        'backgroundcolor',back_color,'tag','mytooltip','edgecolor',[0 0 0],...
-        'hittest','off')
     drawnow update;
 else
     set(ConfigGUI.getp,'String',sprintf('(Outside)'));
@@ -1183,8 +1357,10 @@ global ConfigGUI
 global path_atts
 minimum_val = 1000;
 for i = 2:size(path_atts,1)
-    curr_dist = point_to_line(pt,ConfigGUI.Node_pos(path_atts{i,3},1:2),ConfigGUI.Node_pos(path_atts{i,4},1:2));
-    
+    [node1idx,~] = find(ConfigGUI.node_connections.' == path_atts{i,3});
+    [node2idx,~] = find(ConfigGUI.node_connections.' == path_atts{i,4});
+    %curr_dist = point_to_line(pt,ConfigGUI.Node_pos(path_atts{i,3},1:2),ConfigGUI.Node_pos(path_atts{i,4},1:2));
+    curr_dist = point_to_line(pt,ConfigGUI.Node_pos(node1idx,1:2),ConfigGUI.Node_pos(node2idx,1:2));
     if curr_dist < minimum_val
         minimum_val = curr_dist;
         index = i-1;        

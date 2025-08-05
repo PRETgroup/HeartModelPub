@@ -79,19 +79,21 @@ ConfigGUI.unitchoice = uicontrol('Parent',ConfigGUI.model_settings,...
     'String',{'Milliseconds','Seconds'},...
     'HandleVisibility','callback',...
     'Tag','unitchoice');
+%%%% Notes in the TO ADD section
 uicontrol('Parent',ConfigGUI.model_settings,...
     'Style','text',...
     'Units','normalized',...
     'Position',[0.6 0.7 0.35 0.15],...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
-    'String','The "second" doesn''t work properly due to dimensionality in the parameter files',...
+    'String','The "second" fails due to dimensionality in the parameter files and simulink library model (CLSfixed.slx)',...
     'HandleVisibility','callback');
-uicontrol('Parent',ConfigGUI.pacemaker_settings,...
+% Anymore model settings?
+uicontrol('Parent',ConfigGUI.model_settings,...
     'Style','text',...
     'Units','normalized',...
-    'Position',[0.6 0.7 0.35 0.35],...
+    'Position',[0.6 0.3 0.35 0.15],...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
-    'String','What more to add here??? Scale the parameters to the seconds variant (currently only ms)',...
+    'String','These plots are currently not set up to change anything in the network GUI',...
     'HandleVisibility','callback');
 
 % Whether to edit the existing model structure (opens the Heart Editing GUI after this one closes)
@@ -201,17 +203,36 @@ ConfigGUI.closebutton = uicontrol('Parent',ConfigGUI.Handle,...
     'Callback',@closeGUI,...
     'Tag','closeButton');
 
-% Anymore model settings?
 % Pacemaker Settings
+
 % 1. Whether to have a pacemaker at all in the modelling
 %  -- decides whether to use the rest of this GUI section
-% 2. What type of pacemaker 
+
+uicontrol('Parent',ConfigGUI.pacemaker_settings,...
+    'Style','text',...
+    'Units','normalized',...
+    'Position',[0.05 0.8 0.1 0.15],...
+    'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+    'String','Model Type:',...
+    'HandleVisibility','callback');
+ConfigGUI.pacemaker = uicontrol('Parent',ConfigGUI.pacemaker_settings,...
+    'Style','popupmenu',...
+    'Units','normalized',...
+    'Position',[0.2 0.8 0.2 0.15],...
+    'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
+    'String',{'Full CLSfixed', 'Pacemaker', 'No Pacemaker'},...
+    'HandleVisibility','callback',...
+    'Callback',@deviceChange,...
+    'Tag','editmodel');
+
+% 2. What type of pacemaker TO ADD
 % https://www.ncbi.nlm.nih.gov/books/NBK556011/ ---??????
 % DDT
 % Dual chamber/single chamber
 % Resp Modulation (future work)
 
-%% desired
+% 3. Pacemaker settings
+%% desired (from CLSfixed/cfgs/Scfgf)
 xa=1;
 xc=0.05;
 xc1=0.1;
@@ -226,7 +247,7 @@ uni_v=1;
 Sens_v=2.8;
 Amp_vp=500;
 
-strings = {'LRI:', 'AVI:', 'URI:', 'VRP:', 'PVARP:'};
+strings = {'LRI (ms):', 'AVI (ms):', 'URI (ms):', 'VRP (ms):', 'PVARP (ms):'};
 left_positions = [0.05 0.05 0.05 0.05 0.05];
 bot_positions = [0.7 0.6 0.5 0.4 0.3];
 h_positions = [0.1 0.1 0.1 0.1 0.1];
@@ -259,6 +280,29 @@ end
 
 waitfor(ConfigGUI.Handle);
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function deviceChange(hObject,eventdata)
+lri=findobj('tag','lri');
+avi=findobj('tag','avi');
+uri=findobj('tag','uri');
+vrp=findobj('tag','vrp');
+pvarp=findobj('tag','pvarp');
+
+if ConfigGUI.pacemaker.Value < 3
+    lri.Style = 'edit';
+    avi.Style = 'edit';
+    uri.Style = 'edit';
+    vrp.Style = 'edit';
+    pvarp.Style = 'edit';
+else
+    lri.Style = 'text';
+    avi.Style = 'text';
+    uri.Style = 'text';
+    vrp.Style = 'text';
+    pvarp.Style = 'text';
+end
+    
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function closeGUI(hObject,eventdata)
 outputs.plot0 = ConfigGUI.plot0.String{ConfigGUI.plot0.Value};
@@ -270,9 +314,13 @@ outputs.plot5 = ConfigGUI.plot5.String{ConfigGUI.plot5.Value};
 outputs.param = ConfigGUI.parameterchoice.String{ConfigGUI.parameterchoice.Value};
 outputs.units = ConfigGUI.unitchoice.Value;
 outputs.editmodel = ConfigGUI.editmodel.Value;
+outputs.pacemaker = ConfigGUI.pacemaker.Value;
 
 strings = {'LRI', 'AVI', 'URI', 'VRP', 'PVARP'};
 base = [1000 170 500 230 250];
+if outputs.units == 2
+    base= [1000/1000 170/1000 500/1000 230/1000 250/1000];
+end
 
 for i = 1:length(strings)
     q = findobj('tag',lower(strings(i)));
@@ -284,6 +332,5 @@ for i = 1:length(strings)
     end
 end
 close all
-
 end
 end
