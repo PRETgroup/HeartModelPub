@@ -832,6 +832,10 @@ true_index = node_atts{ConfigGUI.ind2+1,2};
 partial1 =[node_atts{2:end,2}].';
 [index1,~] = find(partial1 == true_index);
 index1 = index1+1;
+<<<<<<< HEAD
+=======
+% TO CHECK: assignin use? 
+>>>>>>> c7bccc6e506179fe24813d75c63f89dee75a0c75
 node_atts(index1,:) = [];
 node_atts_copy(index1,:) = [];
 nodes_name(index1,:) = [];
@@ -1065,14 +1069,20 @@ global ConfigGUI
 global path_atts
 global node_atts
 global nodes_name
+<<<<<<< HEAD
 global probes_name
+=======
+>>>>>>> c7bccc6e506179fe24813d75c63f89dee75a0c75
 global timescale
 %%% Save the model updates and empty any arrays
 close all
 model.node_atts=node_atts;
 model.nodes_name=nodes_name;
 model.path_atts=path_atts;
+<<<<<<< HEAD
 model.probes=probes_name;
+=======
+>>>>>>> c7bccc6e506179fe24813d75c63f89dee75a0c75
 if strcmp('sec',timescale)
     PreBuild_unified(true,model)
 elseif strcmp('msec',timescale)

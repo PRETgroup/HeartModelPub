@@ -60,8 +60,8 @@ if outputs.editmodel
     global path_atts
     global path_atts_copy
     global params
-    global nodes_name 
-    global probes_name %is just the entire probes information set
+    global nodes_name %potentially join the nodes_name into the front of node_atts
+    global probes_name 
     temp = nodes_raw(:,2:end);
     temp(:,end-2) = [];
     temp(end,:) = [];
@@ -81,7 +81,6 @@ end
 % TO DEBUG: _pace and _nopace functionality: test with other parameter sets
 % 05/08/25: tested successfully 
 % TO ADD: switching CLSfixed to Libs_unified base
-
 
 % contains all configurations of heart model
 load(filename);

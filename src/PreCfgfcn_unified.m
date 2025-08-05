@@ -1,5 +1,7 @@
 function [Node,Node_name,Node_pos,Path,Path_name,Probe,Probe_name,Probe_pos,cfgports]=PreCfgfcn_unified(filexls,Noderange,Node_P_range,Pathrange, Path_P_range, Proberange,filename,datafile,second,create)
 
+% Copyright 2025 Ben Allen.
+% This program is released under license GPL version 3.
 %% Read paras from xlsx
 % Read cfg data from workspace if created network or files if original
 if isstruct(create)
@@ -30,7 +32,6 @@ else
     [~,Path_para,~] = xlsread(filexls, 'Path',Path_P_range);
     [Probe,Probe_name,Probe_Raw] = xlsread(filexls, 'Probe',Proberange);
 end
-% Read Probe cfg data
 Node_pos=Node(:,46:47);
 Probe_pos=Probe(:,2:3);
 % Save cfg data

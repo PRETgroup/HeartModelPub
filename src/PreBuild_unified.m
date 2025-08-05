@@ -139,7 +139,7 @@ for idx=1:length(cell_array)
         result = false;
         waitfor(f);
         return 
-    elseif (idx >4 && idx <(length(cell_array))) && ~contains(cell_array{idx},':')
+    elseif (idx >4 && idx <length(cell_array)) && ~contains(cell_array{idx},':')
         f = msgbox("Range incomprehensible: "+cell_array{idx},"Error","error");
         result = false;
         waitfor(f);

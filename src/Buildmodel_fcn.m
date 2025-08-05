@@ -578,6 +578,7 @@ for i=1:size(Path_name,1)
     add_line(Heart,sprintf('Wave%d/1',i),sprintf('Wave_out/%d',i));
 end
 
+
 if standalone 
     % Building I/O connections for the heart model
     ports = get_param(Heart,"PortHandles");
