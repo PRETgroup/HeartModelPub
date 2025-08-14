@@ -73,12 +73,7 @@ end
 %% Choose Nodes/Path library and build a heart model,which will be saved to the systempath.
 rootPath=pwd;% may result in errors if running file from within 'src'
 path_var=[rootPath,filesep 'models']; % the path where the model will be saved
-% TO ADD: Confirm Libs_unified and add it in here instead of either library
-if second
-    folder='Libs_second';
-else
-    folder='Libs';
-end
+folder = 'Libs_unified';
 library = [rootPath,filesep 'Lib' filesep folder];% the components library path
 node_n = append(folder,'/Node_N_V6'); % The N type cell model library
 node_m = append(folder,'/Node_M_V4'); % The M type cell model library
@@ -91,10 +86,16 @@ Buildmodel_fcn(HeartModel,filename,node_n,node_m,node_nm,...
 % CLSfixed
 if isstruct(arrays)
     load_system(HeartModel)
-    c = load_system('CLSfixed.slx'); %how to guarantee it is a nopace/pace
-    replace_block(c,'Name','Heart', append(HeartModel,'/Heart'),'noprompt')
-    replace_block(c,'Name','Heart1', append(HeartModel,'/Heart'),'noprompt')
-    save_system(c,[path_var, filesep, 'CLSfixed_current.slx'])    
+    models={'CLSfixed.slx', 'CLSfixed_pace.slx', 'CLSfixed_nopace.slx'};
+    modelName = models{arrays.pacemaker};
+    c = load_system(modelName);
+    if arrays.pacemaker == 1
+        replace_block(c,'Name','Heart', append(HeartModel,'/Heart'),'noprompt')
+        replace_block(c,'Name','Heart1', append(HeartModel,'/Heart'),'noprompt')
+    else
+        replace_block(c,'Name','Heart', append(HeartModel,'/Heart'),'noprompt')
+    end
+    save_system(c,[path_var, filesep, modelName])
 end
 end
 

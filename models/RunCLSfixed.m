@@ -13,9 +13,12 @@ warning('off','all')
 global outputs 
 outputs = main_settings();
 Heart_GUI_preset(outputs);
+%Millisecond: parasNormal, Multi[2,3,_Bradycardia]
+%Second: parasMulti[_second,_AV_block]
 switch outputs.param
     case 'Normal'        %1
         updatePara='parasNormal.mat';
+        updatePara='parasMulti_second.mat';
     case 'parasMulti' %2
         updatePara='parasMulti.mat';
     case 'parasMulti2' %3
@@ -25,6 +28,7 @@ switch outputs.param
     otherwise 
         updatePara='parasNormal.mat';
 end
+assignin('base','sens_units',outputs.units) % Sensing charts Chart (unit) subsystem
 %Prepare the parameters
 if outputs.units == 2 
     filename='N3Cfg_second.mat'; 
@@ -34,9 +38,10 @@ if outputs.units == 2
     assignin('base','solvertime',5); % solving time for the GUI cells 
     assignin('base','stepsize',0.0005); % step size for solving the GUI cells 
     assignin('base','period',0.001); % clk in CLSfixed Period(secs) 
-    assignin('base','timescale','sec'); % time scale for GUI plots and Sensing/Chart[3]
+    assignin('base','timescale','s'); % time scale for GUI plots
     assignin('base','buffer',0.599); % for Libs_unified/Path_V3/Path Buffer_i and Buffer_j
-    assignin('base','unit_conversion',1); % to be used with the N node ms/s setting in RR
+    assignin('base','unit_conversion',1); % used with the N node ms/s setting in RR
+    
 elseif outputs.units == 1
     filename='N3Cfg.mat'; 
     datafile='N3Data.mat'; 
@@ -45,7 +50,7 @@ elseif outputs.units == 1
     assignin('base','solvertime',5000);
     assignin('base','stepsize',0.1);
     assignin('base','period',1);
-    assignin('base','timescale','msec');
+    assignin('base','timescale','ms');
     assignin('base','buffer',599);
     assignin('base','unit_conversion',1000);
 end
@@ -75,12 +80,9 @@ if outputs.editmodel
     assignin('base','nodes_name',temp1);
     temp2 = probes_raw(2:end,1:5);
     assignin('base','probes_name',temp2);
-    Heart_Editing_GUI(filename,nodes_name,probes_name,params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale);
+    Heart_Editing_GUI(filename,nodes_name,probes_name,params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale,outputs.pacemaker);
 end
 
-% TO DEBUG: _pace and _nopace functionality: test with other parameter sets
-% 05/08/25: tested successfully 
-% TO ADD: switching CLSfixed to Libs_unified base
 
 % contains all configurations of heart model
 load(filename);

@@ -1,6 +1,5 @@
 function Buildmodel_fcn(HeartModel,filename,node_n,node_m,node_nm,path,probe,systempath,library,standalone)
-% Copyright 2019 Weiwei Ai.
-% This program is released under license GPL version 3.
+
 %%
 bdclose('all'); %closes any open Simulink windows
 
