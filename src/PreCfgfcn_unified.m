@@ -1,5 +1,5 @@
-function [Node,Node_name,Node_pos,Path,Path_name,Probe,Probe_name,Probe_pos,cfgports]=PreCfgfcn_unified(filexls,Noderange,Node_P_range,Pathrange, Path_P_range, Proberange,filename,datafile,second,create)
-
+function [Node,Node_name,Node_pos,Path,Path_name,Probe,Probe_name,Probe_pos,cfgports]=PreCfgfcn_unified(filexls,Noderange,Node_P_range,Pathrange, Path_P_range, Proberange,filename,datafile,create)
+second = evalin('base','timescale');
 %% Read paras from xlsx
 % Read cfg data from workspace if created network or files if original
 if isstruct(create)
@@ -19,7 +19,7 @@ if isstruct(create)
     Probe = cell2mat(Probe_Raw(:,2:end));
 else
     % Read in Node and Path cfg data depending on unit selected
-    if second
+    if strcmp(second,'s')
         [Node,Node_name,Node_Raw] = xlsread(filexls, 'Node_second',Noderange);
         [Path,Path_name,Path_Raw] = xlsread(filexls, 'Path_second',Pathrange);
     else

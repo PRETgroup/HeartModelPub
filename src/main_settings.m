@@ -10,6 +10,7 @@ classdef main_settings
         editmodel
         units
         pacemaker
+        tutorial
     end
     methods 
         function obj = main_settings()
@@ -23,6 +24,7 @@ classdef main_settings
             obj.editmodel = false;
             obj.units = 1;
             obj.pacemaker= 1;
+            obj.tutorial = false;
         end
         function obj = set.plot0(obj,val)
             obj.plot0 = val;
@@ -53,6 +55,9 @@ classdef main_settings
         end
         function obj = set.pacemaker(obj,val)
             obj.pacemaker = val;
+        end
+        function obj = set.tutorial(obj,val)
+            obj.tutorial = val;
         end
 
     end

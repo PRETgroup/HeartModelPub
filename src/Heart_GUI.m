@@ -1,4 +1,4 @@
-function Heart_GUI(mdl,modelName,filename,savepath,raw_excel,raw_probes,timescale)
+function Heart_GUI(mdl,modelName,filename,savepath,raw_excel,raw_probes)
 % Copyright 2019 Weiwei Ai.
 % This program is released under license GPL version 3.
 % EGMs have a funny output - check root cause for order
@@ -7,14 +7,13 @@ global nodes_name
 nodes_name = raw_excel(:,1:2);
 global probes_name
 probes_name = raw_probes(:,1);
-global timescale
+timescale = evalin('base','timescale');
 %% GUI
 global ConfigGUI
 % initialization
 ConfigGUI.path_plot=[];
 ConfigGUI.cells=[];
 ConfigGUI.Node_pos=[];
-ConfigGUI.t=0;
 %% Link to the model
 ConfigGUI.modelName=modelName;
 ConfigGUI.mdl = mdl;
@@ -24,7 +23,11 @@ open_system(ConfigGUI.mdl);
 %% Save some of the models original info that this UI may change (and needs to change back again when the simulation stops)
 ConfigGUI.originalStopTime = get_param(ConfigGUI.modelName,'Stoptime');
 ConfigGUI.originalMode =  get_param(ConfigGUI.modelName,'SimulationMode');
-ConfigGUI.simtime=2000;
+if strcmp(timescale,'s')
+    ConfigGUI.simtime=2;
+else
+    ConfigGUI.simtime=2000;
+end
 %% Get the display
 pos = get(0, 'screensize'); %get the screensize
 W=pos(3);
@@ -98,7 +101,7 @@ grid(ConfigGUI.P,'on');
 grid(ConfigGUI.S,'on');
 grid(ConfigGUI.R,'on');
 % Draw initial lines of the EGM and events
-ConfigGUI.aegm=animatedline('LineWidth',1.5,'Color',[0 0 0],'Parent',ConfigGUI.AEGM,'MaximumNumPoints',4000);
+ConfigGUI.aegm=animatedline('LineWidth',1.5,'Color',[0 0 0],'Parent',ConfigGUI.AEGM);
 ConfigGUI.vegm=animatedline('LineWidth',1.5,'Color',[0 0 0],'Parent',ConfigGUI.VEGM,'MaximumNumPoints',4000);
 ConfigGUI.aget=animatedline('LineWidth',1.5,'Color',[0 0 0],'Parent',ConfigGUI.GET,'MaximumNumPoints',4000);
 ConfigGUI.vget=animatedline('LineWidth',1.5,'Color',[0 0 0],'Parent',ConfigGUI.GET,'MaximumNumPoints',1000);
@@ -127,7 +130,7 @@ ConfigGUI.hop = uipanel('Parent',ConfigGUI.Handle,...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
     'HandleVisibility','callback',...
     'Tag','tunePanel');
-strings = {'Start','Pause','Stop','2000'};
+strings = {'Start','Pause','Stop',int2str(ConfigGUI.simtime)};
 positions = [0.6 0.4 0.2 0];
 tags = {'startpb','pausepb','stoppb','simtime'};
 callbacks = {@localStartPressed, @localPausePressed, @localStopPressed,@localSetTime};
@@ -153,7 +156,7 @@ ConfigGUI.hplay = uipanel('Parent',ConfigGUI.Handle,...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
     'HandleVisibility','callback',...
     'Tag','tunePanel');
-strings = {'Load','Start','Pause','0','2000'};
+strings = {'Load','Start','Pause','0',int2str(ConfigGUI.simtime)};
 positions = [0.8 0.6 0.4 0.2 0];
 style={'pushbutton','pushbutton','pushbutton','edit','edit'};
 tags = {'loadpb','playstart','playpause','playst','played'};
@@ -178,6 +181,8 @@ ConfigGUI.EachNode=5;  % Number of outputs of each node
 ConfigGUI.EachPath=8;  % Number of outputs of each path
 % Store ConfigGUI to Userdata and communicate with the Simulink model
 set_param(sprintf('%s/S-Function',ConfigGUI.modelName),'UserData',ConfigGUI);
+
+%waitfor(ConfigGUI.Handle);
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Function for Load model
@@ -500,15 +505,16 @@ st=ConfigGUI.NumPaths*ConfigGUI.EachPath+ConfigGUI.NumNodes*ConfigGUI.EachNode;
 % Get the handle to the line that currently needs updating
 LineHandles={Config.aegm,Config.vegm};
 LineAxes={Config.AEGM,Config.VEGM};
+stoptime = evalin('base','stoptime');
+sTime = t;
 for i=1:2
     thisLineHandle = LineHandles{i};
     % Get the simulation time and the block data
-    sTime = t;
     data = u(st+i);
-    newXLim = [max(0,sTime-2000) max(2000,sTime)];
+    newXLim = [max(0,sTime-stoptime) max(stoptime,sTime)];
     set(LineAxes{i},'Xlim',newXLim);
     addpoints(thisLineHandle,sTime,data);
-    drawnow update;
+    drawnow limitrate;
 end
 % Update events
 st=st+2;
@@ -518,15 +524,14 @@ LineAxes={Config.GET,Config.P,Config.S,Config.R};
 for i=1:4
     thisLineHandle = LineHandles{i*2-1};
     % Get the simulation time and the block data
-    sTime = t;
     data1 = u(st+i*2-1);
     data2=-u(st+i*2);
-    newXLim = [max(0,sTime-2000) max(2000,sTime)];
+    newXLim = [max(0,sTime-stoptime) max(stoptime,sTime)];
     set(LineAxes{i},'Xlim',newXLim);
     addpoints(thisLineHandle,sTime,data1);
     thisLineHandle = LineHandles{i*2};
     addpoints(thisLineHandle,sTime,data2);
-    drawnow update;
+    drawnow limitrate;
 end
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

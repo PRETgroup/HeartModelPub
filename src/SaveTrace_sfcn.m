@@ -84,14 +84,15 @@ st=Config.NumPaths*Config.EachPath+Config.NumNodes*Config.EachNode;
 % Get the handle to the line that currently needs updating
 LineHandles={Config.aegm,Config.vegm};
 LineAxes={Config.AEGM,Config.VEGM};
+stoptime = evalin('base','stoptime');
+sTime = t;
 for i=1:2
     thisLineHandle = LineHandles{i};
     % Get the simulation time and the block data
-    sTime = t;
     data = u(st+i);
-    newXLim = [max(0,sTime-2000) max(2000,sTime)];
+    newXLim = [max(0,sTime-stoptime) max(stoptime,sTime)];
     set(LineAxes{i},'Xlim',newXLim);
-    addpoints(thisLineHandle,sTime,data);
+    addpoints(thisLineHandle,t,data);
     drawnow update;
 end
 % Update events
@@ -102,14 +103,13 @@ LineAxes={Config.GET,Config.P,Config.S,Config.R};
 for i=1:4
     thisLineHandle = LineHandles{i*2-1};
     % Get the simulation time and the block data
-    sTime = t;
     data1 = u(st+i*2-1);
     data2=-u(st+i*2);
-    newXLim = [max(0,sTime-2000) max(2000,sTime)];
+    newXLim = [max(0,sTime-stoptime) max(stoptime,sTime)];
     set(LineAxes{i},'Xlim',newXLim);
-    addpoints(thisLineHandle,sTime,data1);
+    addpoints(thisLineHandle,t,data1);
     thisLineHandle = LineHandles{i*2};
-    addpoints(thisLineHandle,sTime,data2);
+    addpoints(thisLineHandle,t,data2);
     drawnow update;
 end
 set_param(gcbh,'UserData',Config);

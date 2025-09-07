@@ -1,8 +1,8 @@
-function PreBuild_unified(second,arrays)
+function PreBuild_unified(arrays)
 arguments
-    second = true;
     arrays = 'NaN';
 end
+
 %%
 % Read in user inputs for the reading of excel file and saving of model
 % (loop ensures the user puts in the correct information for it to work)
@@ -22,19 +22,19 @@ if ~isstruct(arrays)
         end
     end
     filexls=answer{1}; % The excel file name
-    % contains all configurations of heart model, which will be used to build a new heart model
-    filename=answer{2};
-    % contains all parameters of heart model, which will be used for simulation
-    datafile=answer{3};
     % The name of the heart model
-    HeartModel=answer{4};
+    HeartModel=answer{2};
+    % contains all configurations of heart model, which will be used to build a new heart model
+    filename=strcat('N3Cfg_',erase(HeartModel,'Heart_'),'.mat');
+    % contains all parameters of heart model, which will be used for simulation
+    datafile=strcat('N3Data_',erase(HeartModel,'Heart_'),'.mat');
     % Specify the range of reading
-    Noderange=answer{5};
-    Node_P_range= answer{6}; % the parameter names
-    Pathrange= answer{7};
-    Path_P_range= answer{8};% the parameter names
-    Proberange= answer{9};
-    Standalone = ismember(lower(answer{10}),{'true','1','yes'});
+    Noderange=answer{3};
+    Node_P_range= answer{4}; % the parameter names
+    Pathrange= answer{5};
+    Path_P_range= answer{6};% the parameter names
+    Proberange= answer{7};
+    Standalone = ismember(lower(answer{8}),{'true','1','yes'});
 else
     while(1)
         answer = dialogoptions_sml();
@@ -55,9 +55,9 @@ else
     % The name of the heart model
     HeartModel=answer{1};
     % contains all configurations of heart model, which will be used to build a new heart model
-    filename=answer{2};
+    filename=strcat('N3Cfg_',erase(HeartModel,'Heart_'),'.mat');
     % contains all parameters of heart model, which will be used for simulation
-    datafile=answer{3};
+    datafile=strcat('N3Data_',erase(HeartModel,'Heart_'),'.mat');
     filexls = 'NaN';
     Noderange = 'NaN';
     Node_P_range = 'NaN';
@@ -68,7 +68,7 @@ else
 end
 [Node,Node_name,Node_pos,Path,Path_name,...
     Probe,Probe_name,Probe_pos,cfgports]=PreCfgfcn_unified(filexls,...
-        Noderange,Node_P_range,Pathrange,Path_P_range,Proberange,filename,datafile,second,arrays);
+        Noderange,Node_P_range,Pathrange,Path_P_range,Proberange,filename,datafile,arrays);
 
 %% Choose Nodes/Path library and build a heart model,which will be saved to the systempath.
 rootPath=pwd;% may result in errors if running file from within 'src'
@@ -96,51 +96,51 @@ if isstruct(arrays)
         replace_block(c,'Name','Heart', append(HeartModel,'/Heart'),'noprompt')
     end
     save_system(c,[path_var, filesep, modelName])
+    assignin('base','filename',filename)
+    assignin('base','datafile',datafile)
 end
 end
 
 function answer = dialogoptions()
 %popup box for the user defined inputs
-prompt = {'Enter input excel file name:','Cfg file name:',...
-    'Data file name:', 'Heart model name:', 'Node range:',...
+prompt = {'Enter input excel file name:','Heart model name:', 'Node range:',...
         'Node Parameter range:', 'Path range:',...
         'Path Parameter range:','Probe range:', 'Standalone Heart:'};
 dlgtitle = 'Input';
-fieldsize = [1 30; 1 30; 1 30; 1 30; 1 20; 1 20; 1 20; 1 20; 1 20; 1 20];
-definput = {'Heart_N3_second.xlsx','N3Cfg_example.mat',...
-    'N3Data_example.mat','Heart_example', 'A2:AW44'...
-        'D1:AW1','A2:O55','E1:O1','A2:E9', 'Yes'}; %A2:E9 throws errors (TO DEBUG)
+fieldsize = [1 30; 1 30; 1 20; 1 20; 1 20; 1 20; 1 20; 1 20];
+definput = {'Heart_N3_second.xlsx','Heart_example', 'A2:AW44'...
+        'D1:AW1','A2:O55','E1:O1','A2:E9', 'Yes'};
 answer = inputdlg(prompt,dlgtitle,fieldsize,definput);
 end
 
 function answer = dialogoptions_sml()
 %popup box for the user defined inputs
-prompt = {'Heart model name:','Cfg file name:','Data file name:'};
+prompt = {'Heart model name:'};
 dlgtitle = 'Input';
-fieldsize = [1 30; 1 30; 1 30];
-definput = {'Heart_example','N3Cfg_example.mat','N3Data_example.mat'};
+fieldsize = [1 30];
+definput = {'Heart_example'};
 answer = inputdlg(prompt,dlgtitle,fieldsize,definput);
 end
 
 function result=ischeck(cell_array)
 % Function to check if the inputs are correct
 for idx=1:length(cell_array)
-    if isnumeric(cell_array{idx}) || isempty(cell_array{idx})
-        f =msgbox("Invalid Value: "+cell_array{idx},"Error","error");
+    if isempty(cell_array{idx})
+        f =msgbox("Missing value: "+cell_array{idx},"Error","error");
         result = false;
         waitfor(f);
         return 
-    elseif idx ==1 && ~exist(char(cell_array{idx}),'file')
-        f = msgbox("File does not exist: "+cell_array{idx},"Error","error");
+    elseif (idx ==1) && ~exist(char(cell_array{idx}),'file')
+        f = msgbox("Excel file does not exist: "+cell_array{idx},"Error","error");
         result = false;
         waitfor(f);
         return 
-    elseif (idx >1 && idx <4) && ~contains(cell_array{idx},'.mat')
-        f = msgbox("File error: "+cell_array{idx},"Error","error");
+    elseif (idx == 2) && isfile(['models\' cell_array{idx} '.slx'])
+        f = msgbox("Model already exists: "+cell_array{idx},"Error","error");
         result = false;
         waitfor(f);
         return 
-    elseif (idx >4 && idx <length(cell_array)) && ~contains(cell_array{idx},':')
+    elseif (idx >2 && idx <length(cell_array)) && ~contains(cell_array{idx},':')
         f = msgbox("Range incomprehensible: "+cell_array{idx},"Error","error");
         result = false;
         waitfor(f);
@@ -158,18 +158,16 @@ end
 
 function result=ischeck_sml(cell_array)
 % Function to check if the inputs are correct for the smaller version
-for idx=1:length(cell_array)
-    if isnumeric(cell_array{idx}) || isempty(cell_array{idx})
-        f =msgbox("Invalid Value: "+cell_array{idx},"Error","error");
-        result = false;
-        waitfor(f);
-        return 
-    elseif (idx >1) && ~contains(cell_array{idx},'.mat')
-        f = msgbox("File error: "+cell_array{idx},"Error","error");
-        result = false;
-        waitfor(f);
-        return 
-    end
+if isempty(cell_array{1})
+    f =msgbox("Missing Value: "+cell_array{1},"Error","error");
+    result = false;
+    waitfor(f);
+    return 
+elseif isfile(['models\' cell_array{1} '.slx'])
+    f = msgbox("Model already exists: "+cell_array{1},"Error","error");
+    result = false;
+    waitfor(f);
+    return 
 end
 result = true;
 end

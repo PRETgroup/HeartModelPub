@@ -15,18 +15,30 @@ outputs = main_settings();
 Heart_GUI_preset(outputs);
 %Millisecond: parasNormal, Multi[2,3,_Bradycardia]
 %Second: parasMulti[_second,_AV_block]
-switch outputs.param
-    case 'Normal'        %1
-        updatePara='parasNormal.mat';
-        updatePara='parasMulti_second.mat';
-    case 'parasMulti' %2
-        updatePara='parasMulti.mat';
-    case 'parasMulti2' %3
-        updatePara='parasMulti2.mat';
-    case 'parasMulti3' %4
-        updatePara='parasMulti3.mat';
-    otherwise 
-        updatePara='parasNormal.mat';
+if outputs.units == 2
+    switch outputs.param
+        case 'Normal'        %1
+            updatePara='parasMulti_second.mat';
+        case 'AV Block' %2
+            updatePara='parasMulti_AV_block.mat';
+        otherwise 
+            updatePara='parasMulti_second.mat';
+    end
+else
+    switch outputs.param
+        case 'Normal'        %1
+            updatePara='parasNormal.mat';
+        case 'parasMulti' %2
+            updatePara='parasMulti.mat';
+        case 'parasMulti2' %3
+            updatePara='parasMulti2.mat';
+        case 'parasMulti3' %4
+            updatePara='parasMulti3.mat';
+        case 'Bradycardia' %5
+            updatePara = 'parasMulti_Bradycardia.mat';
+        otherwise 
+            updatePara='parasNormal.mat';
+    end
 end
 assignin('base','sens_units',outputs.units) % Sensing charts Chart (unit) subsystem
 %Prepare the parameters
@@ -36,12 +48,11 @@ if outputs.units == 2
     pathsheet='Path_second';
     nodesheet='Node_second'; 
     assignin('base','solvertime',5); % solving time for the GUI cells 
-    assignin('base','stepsize',0.0005); % step size for solving the GUI cells 
-    assignin('base','period',0.001); % clk in CLSfixed Period(secs) 
+    assignin('base','stepsize',0.0005); % step size for solving the GUI cells and the CLS sample time
     assignin('base','timescale','s'); % time scale for GUI plots
     assignin('base','buffer',0.599); % for Libs_unified/Path_V3/Path Buffer_i and Buffer_j
     assignin('base','unit_conversion',1); % used with the N node ms/s setting in RR
-    
+    assignin('base','stoptime',2) % CLSfixed initial stop time
 elseif outputs.units == 1
     filename='N3Cfg.mat'; 
     datafile='N3Data.mat'; 
@@ -49,11 +60,12 @@ elseif outputs.units == 1
     nodesheet='Node'; 
     assignin('base','solvertime',5000);
     assignin('base','stepsize',0.1);
-    assignin('base','period',1);
     assignin('base','timescale','ms');
     assignin('base','buffer',599);
     assignin('base','unit_conversion',1000);
+    assignin('base','stoptime',2000)
 end
+
 % Extract the node classification data from the xlsx file
 [~,~,nodes_raw]=xlsread('Heart_N3_second.xlsx',nodesheet);
 [~,~,path_raw]=xlsread('Heart_N3_second.xlsx',pathsheet);
@@ -83,15 +95,19 @@ if outputs.editmodel
     Heart_Editing_GUI(filename,nodes_name,probes_name,params,node_atts,node_atts_copy,path_atts,path_atts_copy,timescale,outputs.pacemaker);
 end
 
-
 % contains all configurations of heart model
 load(filename);
 % contains all parameters of heart model
 load(datafile);
 % Load in the new parameter range
 load(updatePara);
-% Specify the model name
+% Global parameters
+assignin('base','paras_length',length(pp))
+assignin('base','cfg_length',length(cfgdata))
+assignin('base','pNode_length',length(pNode))
+assignin('base','pPath_length',length(pPath))
 models={'CLSfixed', 'CLSfixed_pace', 'CLSfixed_nopace'};
+% Specify the model name
 modelName = models{outputs.pacemaker};
 % Specify the model path
 mdl=[path_var,filesep, modelName];
@@ -99,4 +115,4 @@ mdl=[path_var,filesep, modelName];
 savepath=[path_var,filesep 'Cells.mat'];
 
 % In the model, there should be a S-function to save data to the same structure of the GUI.
-Heart_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw,timescale); 
+Heart_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw); 
