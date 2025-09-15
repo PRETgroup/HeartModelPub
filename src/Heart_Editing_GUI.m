@@ -1138,7 +1138,7 @@ if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < 
             back_color = [1 .8 .8];
         end
     else
-        str = append('Probe: ',int2str(ind2),' = ', probes_name(ind2+1,1));
+        str = append('Probe: ',int2str(ind2),' = ', probes_name(ind2+1,1)); %TO DEBUG: check if issues here
         back_color = [.75 .75 .75];
     end
     % Display information for the node
