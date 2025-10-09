@@ -58,7 +58,7 @@ elseif outputs.units == 1
     datafile='N3Data.mat'; 
     pathsheet='Path'; 
     nodesheet='Node'; 
-    assignin('base','solvertime',3000);
+    assignin('base','solvertime',5000);
     assignin('base','stepsize',0.1);
     assignin('base','timescale','ms');
     assignin('base','buffer',599);
@@ -115,8 +115,4 @@ mdl=[path_var,filesep, modelName];
 savepath=[path_var,filesep 'Cells.mat'];
 
 % In the model, there should be a S-function to save data to the same structure of the GUI.
-%Heart_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw); 
-
-% Notes from the meeting:
-% - network issues in App seem to be object conflicts
-% - tutorial = create network from scratch 
+Heart_GUI(mdl,modelName,filename,savepath,nodes_raw,probes_raw); 

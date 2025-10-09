@@ -84,7 +84,7 @@ Buildmodel_fcn(HeartModel,filename,node_n,node_m,node_nm,...
     path,probe,path_var,library,Standalone);
 % If this function was started from Heart_Editing then incorporate it into
 % CLSfixed
-if isstruct(arrays)
+if isstruct(arrays) && isfield(arrays,'model')
     load_system(HeartModel)
     models={'CLSfixed.slx', 'CLSfixed_pace.slx', 'CLSfixed_nopace.slx'};
     modelName = models{arrays.pacemaker};
