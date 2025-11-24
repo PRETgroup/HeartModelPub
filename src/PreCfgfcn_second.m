@@ -13,7 +13,7 @@
 % limitations under the License.
 %%
 
-function [Node,Node_name,Node_pos,Path,Path_name,Probe,Probe_name,Probe_pos,cfgports]=PreCfgfcn(filexls,Noderange,Node_P_range,Pathrange, Path_P_range, Proberange,filename,datafile)
+function [Node,Node_name,Node_pos,Path,Path_name,Probe,Probe_name,Probe_pos,cfgports]=PreCfgfcn_second(filexls,Noderange,Node_P_range,Pathrange, Path_P_range, Proberange,filename,datafile)
 
 %% Read paras from xlsx
 % Read Node cfg data
