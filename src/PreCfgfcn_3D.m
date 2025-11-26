@@ -23,14 +23,14 @@ save (filename, 'Node_name','-append');
 save (filename, 'Node_Raw', '-append');
 Node_pos=Node(:,46:48); % x,y,z
 save (filename, 'Node_pos', '-append');
-[~,Node_para,~] = xlsread(filexls, 'Node',Node_P_range);
+[~,Node_para,~] = xlsread(filexls, 'Node_second',Node_P_range);
 save (filename, 'Node_para', '-append');
 % Read Path cfg data
 [Path,Path_name,Path_Raw] = xlsread(filexls, 'Path_second',Pathrange);
 save (filename, 'Path', '-append');
 save (filename, 'Path_name', '-append');
 save (filename, 'Path_Raw', '-append');
-[~,Path_para,~] = xlsread(filexls, 'Path',Path_P_range);
+[~,Path_para,~] = xlsread(filexls, 'Path_second',Path_P_range);
 save (filename, 'Path_para', '-append');
 % Read Probe cfg data
 [Probe,Probe_name,Probe_Raw] = xlsread(filexls, 'Probe',Proberange);
