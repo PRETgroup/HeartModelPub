@@ -37,7 +37,7 @@ save (filename, 'Path_para', '-append');
 save (filename, 'Probe', '-append');
 save (filename, 'Probe_name', '-append');
 save (filename, 'Probe_Raw', '-append');
-Probe_pos=Probe(:,2:3);
+Probe_pos=Probe(:,2:4);
 save (filename, 'Probe_pos', '-append');
 load(filename);
 % Create lookup table for parameters update
