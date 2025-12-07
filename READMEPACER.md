@@ -98,7 +98,7 @@ The heart model is organized into libraries, models, and scripts. Each component
 
 #### Model Libraries
 
-Two versions of library exist: **Libs.slx** & **Libs_second.slx** (Seconds) Same components but adapted for second based simulation for hardware integration ([Notes on Modification from Milliseconds (ms) to Seconds](#Notes-on-Modification-from-Milliseconds-(ms)-to-Seconds))
+Two versions of library exist: **Libs.slx** & **Libs_second.slx** (Seconds) Same components but adapted for second based simulation for hardware integration ([Notes on Modification from Milliseconds (ms) to Seconds](#notes-on-modification-from-milliseconds-ms-to-seconds)).
 
 #### Model Libraries
 
@@ -258,6 +258,7 @@ The electrical activations of the cardiac conduction system is shown on the left
 Version 1 is posted on the public GitHub repository. Copyright 2019 Weiwei Ai, wai484@aucklanduni.ac.nz, The University of Auckland, under license GPL version 
 * July 29, 2025  
 Change the license to Apache-2.0
+
 
 
 
