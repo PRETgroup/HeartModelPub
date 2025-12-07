@@ -86,7 +86,7 @@ HA models retain computational efficiency while supporting the modeling of conti
 
 The heart is represented as an abstracted network of nodes (regional tissue clusters) connected by edges.
 
-![Abstracted heart model ](./images/Abstracted heart model.png)[[3]](https://doi.org/10.1109/tbme.2019.2917212)
+![Abstracted heart model ](./images/Abstracted-heart-model.png)[[3]](https://doi.org/10.1109/tbme.2019.2917212)
 
 ### Model Descriptions
 
@@ -258,5 +258,6 @@ The electrical activations of the cardiac conduction system is shown on the left
 Version 1 is posted on the public GitHub repository. Copyright 2019 Weiwei Ai, wai484@aucklanduni.ac.nz, The University of Auckland, under license GPL version 
 * July 29, 2025  
 Change the license to Apache-2.0
+
 
 
