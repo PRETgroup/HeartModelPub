@@ -182,6 +182,7 @@ Pacemaker cells can initiate action potentials without external stimulation.
 >> sim('SAcell.slx')
 ```
 2.Once the simulation finishes, click the scope to view the output trace. 	
+![SAN Action Potential](./images/SA_AP.png)![AVN Action Potential](./images/AVN_AP.png)![HPS Action Potential](./images/HPS_AP.png)
  	
 **2. Overdrive suppression simulation**
 
@@ -258,6 +259,7 @@ The electrical activations of the cardiac conduction system is shown on the left
 Version 1 is posted on the public GitHub repository. Copyright 2019 Weiwei Ai, wai484@aucklanduni.ac.nz, The University of Auckland, under license GPL version 
 * July 29, 2025  
 Change the license to Apache-2.0
+
 
 
 
