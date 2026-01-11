@@ -1,6 +1,6 @@
 # HeartModelPub
 
-![pacer LOGO ](./images/pacer2.png)![Heart Simulation](./images/heartsimulation.gif)
+![pacer LOGO ](./images/pacer2.png)!
 
 HeartModelPub provides a computational heart model for simulating cardiac electrophysiology and testing implantable pacemaker devices in closed-loop scenarios.
 
@@ -333,4 +333,5 @@ To build a new heart model, update the Excel configuration file (nodes, paths, p
 Version 1 is posted on the public GitHub repository. Copyright 2019 Weiwei Ai, wai484@aucklanduni.ac.nz, The University of Auckland, under license GPL version 
 * July 29, 2025  
 Change the license to Apache-2.0
+
 
