@@ -12,16 +12,21 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 %%
-function Heart_GUI(mdl,modelName,filename,savepath)
+function Heart_GUI(mdl,modelName,filename,savepath,raw_excel,raw_probes)
 
+% EGMs have a funny output - check root cause for order
 close all
+global nodes_name
+nodes_name = raw_excel(:,1:2);
+global probes_name
+probes_name = raw_probes(:,1);
+timescale = evalin('base','timescale');
 %% GUI
 global ConfigGUI
 % initialization
 ConfigGUI.path_plot=[];
 ConfigGUI.cells=[];
 ConfigGUI.Node_pos=[];
-ConfigGUI.t=0;
 %% Link to the model
 ConfigGUI.modelName=modelName;
 ConfigGUI.mdl = mdl;
@@ -31,7 +36,11 @@ open_system(ConfigGUI.mdl);
 %% Save some of the models original info that this UI may change (and needs to change back again when the simulation stops)
 ConfigGUI.originalStopTime = get_param(ConfigGUI.modelName,'Stoptime');
 ConfigGUI.originalMode =  get_param(ConfigGUI.modelName,'SimulationMode');
-ConfigGUI.simtime=2000;
+if strcmp(timescale,'s')
+    ConfigGUI.simtime=2;
+else
+    ConfigGUI.simtime=2000;
+end
 %% Get the display
 pos = get(0, 'screensize'); %get the screensize
 W=pos(3);
@@ -58,6 +67,8 @@ colormap(ConfigGUI.TOP_axe,hot);
 % Place the Nodes and Probes
 ConfigGUI.node_pos=scatter(ConfigGUI.TOP_axe,[],[],100,'filled','LineWidth',2,'Marker','o','CData',[0 0 0]); % black
 ConfigGUI.probe_pos=scatter(ConfigGUI.TOP_axe,[],[],'LineWidth',1.5,'Marker','d','CData',[0 0 0]);
+cbar = colorbar;
+cbar.Label.String = 'Membrane Potential, Shifted (mV)';
 % Place the Wavefronts
 ConfigGUI.wave_posdi=scatter(ConfigGUI.TOP_axe,[],[],50,'LineWidth',1.5,'Marker','v','CData',[1 0 0]);
 ConfigGUI.wave_posdj=scatter(ConfigGUI.TOP_axe,[],[],50,'LineWidth',1.5,'Marker','d','CData',[1 0 0]);
@@ -91,7 +102,7 @@ p(3)=p(3)*1.2;
 %set(ConfigGUI.S,'Ylim',[-1.5 1.5]);
 ConfigGUI.R=subplot(6,2,12,'Parent',ConfigGUI.Handle,'NextPlot','add','Box','on');
 ylabel(ConfigGUI.R,'AR/VR');
-xlabel(ConfigGUI.R,'Time (ms)');
+xlabel(ConfigGUI.R,sprintf('Time (%s)',timescale));
 p = get(ConfigGUI.R,'position');
 p(3)=p(3)*1.2;
 %set(ConfigGUI.R,'Ylim',[-1.5 1.5]);
@@ -103,7 +114,7 @@ grid(ConfigGUI.P,'on');
 grid(ConfigGUI.S,'on');
 grid(ConfigGUI.R,'on');
 % Draw initial lines of the EGM and events
-ConfigGUI.aegm=animatedline('LineWidth',1.5,'Color',[0 0 0],'Parent',ConfigGUI.AEGM,'MaximumNumPoints',4000);
+ConfigGUI.aegm=animatedline('LineWidth',1.5,'Color',[0 0 0],'Parent',ConfigGUI.AEGM);
 ConfigGUI.vegm=animatedline('LineWidth',1.5,'Color',[0 0 0],'Parent',ConfigGUI.VEGM,'MaximumNumPoints',4000);
 ConfigGUI.aget=animatedline('LineWidth',1.5,'Color',[0 0 0],'Parent',ConfigGUI.GET,'MaximumNumPoints',4000);
 ConfigGUI.vget=animatedline('LineWidth',1.5,'Color',[0 0 0],'Parent',ConfigGUI.GET,'MaximumNumPoints',1000);
@@ -132,7 +143,7 @@ ConfigGUI.hop = uipanel('Parent',ConfigGUI.Handle,...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
     'HandleVisibility','callback',...
     'Tag','tunePanel');
-strings = {'Start','Pause','Stop','2000'};
+strings = {'Start','Pause','Stop',int2str(ConfigGUI.simtime)};
 positions = [0.6 0.4 0.2 0];
 tags = {'startpb','pausepb','stoppb','simtime'};
 callbacks = {@localStartPressed, @localPausePressed, @localStopPressed,@localSetTime};
@@ -158,7 +169,7 @@ ConfigGUI.hplay = uipanel('Parent',ConfigGUI.Handle,...
     'BackgroundColor',get(ConfigGUI.Handle,'Color'),...
     'HandleVisibility','callback',...
     'Tag','tunePanel');
-strings = {'Load','Start','Pause','0','2000'};
+strings = {'Load','Start','Pause','0',int2str(ConfigGUI.simtime)};
 positions = [0.8 0.6 0.4 0.2 0];
 style={'pushbutton','pushbutton','pushbutton','edit','edit'};
 tags = {'loadpb','playstart','playpause','playst','played'};
@@ -183,6 +194,8 @@ ConfigGUI.EachNode=5;  % Number of outputs of each node
 ConfigGUI.EachPath=8;  % Number of outputs of each path
 % Store ConfigGUI to Userdata and communicate with the Simulink model
 set_param(sprintf('%s/S-Function',ConfigGUI.modelName),'UserData',ConfigGUI);
+
+%waitfor(ConfigGUI.Handle);
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Function for Load model
@@ -197,7 +210,8 @@ ConfigGUI.Node_pos=dim.Node_pos;
 if ~isempty(ConfigGUI.Node_pos)
     colormap(ConfigGUI.TOP_axe,hot);
     c=zeros(size(ConfigGUI.Node_pos,1),3);
-    set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
+    set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);%'ZData',ConfigGUI.Node_pos(:,3),'CData',c);
+    
     for n=1:length(ConfigGUI.Node_pos(:,1))
         text(ConfigGUI.TOP_axe,ConfigGUI.Node_pos(n,1),ConfigGUI.Node_pos(n,2)+2,int2str(n),'Color','blue','FontSize',12);
     end
@@ -206,29 +220,45 @@ else
     exit;
 end
 if ~isempty(dim.Probe_pos)
-    set(ConfigGUI.probe_pos,'XData',dim.Probe_pos(:,1),'YData',dim.Probe_pos(:,2));
+    set(ConfigGUI.probe_pos,'XData',dim.Probe_pos(:,1),'YData',dim.Probe_pos(:,2));%,'ZData',dim.Probe_pos(:,3));
 else
     error('The Probe position is empty.');
     exit;
 end
-% Draw the paths
+% Draw the paths 
+% IMPORTANT HERE: DETERMINE HOW TO MAKE THE PATHS 3D IF NEEDED AT ALL
+% add dim.Node_pos(dim.Path(n,3),1) and dim.Node_pos(dim.Path(n,3),2) to
+% the x and y respectively
 for n=1:size(dim.Path,1)
     ConfigGUI.path_plot(n)=line([dim.Node_pos(dim.Path(n,1),1),dim.Node_pos(dim.Path(n,2),1)],[dim.Node_pos(dim.Path(n,1),2),dim.Node_pos(dim.Path(n,2),2)],'LineWidth',1.5,'Color',[0 0 0],'Parent',ConfigGUI.TOP_axe);
 end
+
+% Create the legend
+legend([ConfigGUI.node_pos,ConfigGUI.probe_pos,ConfigGUI.wave_posdi,ConfigGUI.wave_posdj,ConfigGUI.wave_posri,ConfigGUI.wave_posrj],...
+    {'Node','Probe','Depolarisation (->)','Depolarisation (<-)','Repolarisation (->)','Repolarisation (<-)'});
+
 % Reset wavefronts to (0,0)
 x0=zeros(1,size(dim.Path,1));
 y0=x0;
-set(ConfigGUI.wave_posdi,'XData',x0,'YData',y0);
-set(ConfigGUI.wave_posdj,'XData',x0,'YData',y0);
-set(ConfigGUI.wave_posri,'XData',x0,'YData',y0);
-set(ConfigGUI.wave_posrj,'XData',x0,'YData',y0);
+%z0=x0;
+set(ConfigGUI.wave_posdi,'XData',x0,'YData',y0);%'ZData',z0);
+set(ConfigGUI.wave_posdj,'XData',x0,'YData',y0);%'ZData',z0);
+set(ConfigGUI.wave_posri,'XData',x0,'YData',y0);%'ZData',z0);
+set(ConfigGUI.wave_posrj,'XData',x0,'YData',y0);%'ZData',z0);
 % Reset
-set(ConfigGUI.setp,'XData',0,'YData',0);
+set(ConfigGUI.setp,'XData',0,'YData',0);%'ZData',z0);
 LineHandles={ConfigGUI.aegm,ConfigGUI.vegm, ConfigGUI.aget,ConfigGUI.vget,ConfigGUI.ap,ConfigGUI.vp,ConfigGUI.as,ConfigGUI.vs,ConfigGUI.ar,ConfigGUI.vr};
 for i=1:10
     thisLineHandle = LineHandles{i};
     clearpoints(thisLineHandle);
 end
+I = imread('heartoutline.jpg'); 
+x = [20 180];
+y = [28 192];
+I = flipdim(I, 1);
+h= image(ConfigGUI.TOP_axe,x,y,I); 
+uistack(h,'bottom')
+
 hold on;
 set_param(sprintf('%s/S-Function',ConfigGUI.modelName),'UserData',ConfigGUI);
 end
@@ -260,11 +290,11 @@ for i=1:10
     clearpoints(thisLineHandle);
 end
 c=zeros(size(ConfigGUI.Node_pos,1),3);
-set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
-set(ConfigGUI.wave_posdi,'XData',0,'YData',0);
-set(ConfigGUI.wave_posdj,'XData',0,'YData',0);
-set(ConfigGUI.wave_posri,'XData',0,'YData',0);
-set(ConfigGUI.wave_posrj,'XData',0,'YData',0);
+set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);%'ZData',ConfigGUI.Node_pos(:,3),'CData',c);
+set(ConfigGUI.wave_posdi,'XData',0,'YData',0);%'ZData',z0);
+set(ConfigGUI.wave_posdj,'XData',0,'YData',0);%'ZData',z0);
+set(ConfigGUI.wave_posri,'XData',0,'YData',0);%'ZData',z0);
+set(ConfigGUI.wave_posrj,'XData',0,'YData',0);%'ZData',z0);
 drawnow update;
 % Run the model
 set_param(ConfigGUI.modelName,'SimulationCommand','start');
@@ -352,15 +382,16 @@ for i=1:10
 end
 c=zeros(size(ConfigGUI.Node_pos,1),3);
 colormap(ConfigGUI.TOP_axe,hot);
-set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
-set(ConfigGUI.wave_posdi,'XData',0,'YData',0);
-set(ConfigGUI.wave_posdj,'XData',0,'YData',0);
-set(ConfigGUI.wave_posri,'XData',0,'YData',0);
-set(ConfigGUI.wave_posrj,'XData',0,'YData',0);
+set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);%'ZData',ConfigGUI.Node_pos(:,3),'CData',c);
+set(ConfigGUI.wave_posdi,'XData',0,'YData',0);%'ZData',0);
+set(ConfigGUI.wave_posdj,'XData',0,'YData',0);%'ZData',0);
+set(ConfigGUI.wave_posri,'XData',0,'YData',0);%'ZData',0);
+set(ConfigGUI.wave_posrj,'XData',0,'YData',0);%'ZData',0);
 drawnow update;
 h = findobj(ConfigGUI.hplay,'Tag','loadpb');
 switch get(h,'String')
     case 'Load'
+        disp('Loading happening')
         set(h,'String','Stop');
         [fname,fpath] = uigetfile('*.mat', 'Load VHM Model');
         dim=load([fpath fname]);
@@ -410,11 +441,11 @@ if strcmp(get(h,'String'),'Start')
         clearpoints(thisLineHandle);
     end
     c=zeros(size(ConfigGUI.Node_pos,1),3);
-    set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);
-    set(ConfigGUI.wave_posdi,'XData',0,'YData',0);
-    set(ConfigGUI.wave_posdj,'XData',0,'YData',0);
-    set(ConfigGUI.wave_posri,'XData',0,'YData',0);
-    set(ConfigGUI.wave_posrj,'XData',0,'YData',0);
+    set(ConfigGUI.node_pos,'XData',ConfigGUI.Node_pos(:,1),'YData',ConfigGUI.Node_pos(:,2),'CData',c);%'ZData',ConfigGUI.Node_pos(:,3),'CData',c);
+    set(ConfigGUI.wave_posdi,'XData',0,'YData',0);%'ZData',0);
+    set(ConfigGUI.wave_posdj,'XData',0,'YData',0);%'ZData',0);
+    set(ConfigGUI.wave_posri,'XData',0,'YData',0);%'ZData',0);
+    set(ConfigGUI.wave_posrj,'XData',0,'YData',0);%'ZData',0);
     drawnow update;
 end
 while (1)
@@ -465,7 +496,7 @@ u=Config.cells(2:end,n);
 ed=(ConfigGUI.NumNodes-1)*ConfigGUI.EachNode;
 %Config.node_pos=scatter(Config.TOP_axe,u(4:EachNode:ed+4),u(5:EachNode:ed+5),70,u(2:EachNode:ed+2),'filled','LineWidth',2,'Marker','o');
 c=u(2:ConfigGUI.EachNode:ed+2);
-set(Config.node_pos,'XData',Config.Node_pos(:,1),'YData',Config.Node_pos(:,2),'CData',c);
+set(Config.node_pos,'XData',Config.Node_pos(:,1),'YData',Config.Node_pos(:,2),'CData',c);%'ZData',ConfigGUI.Node_pos(:,3),'CData',c);
 % Update wavefront
 st=ConfigGUI.NumNodes*ConfigGUI.EachNode;
 ed=(ConfigGUI.NumPaths-1)*ConfigGUI.EachPath+ConfigGUI.NumNodes*ConfigGUI.EachNode;
@@ -477,25 +508,26 @@ xr1=u(st+5:ConfigGUI.EachPath:ed+5);
 yr1=u(st+6:ConfigGUI.EachPath:ed+6);
 xr2=u(st+7:ConfigGUI.EachPath:ed+7);
 yr2=u(st+8:ConfigGUI.EachPath:ed+8);
-set(Config.wave_posdi,'XData',xd1,'YData',yd1);
-set(Config.wave_posdj,'XData',xd2,'YData',yd2);
-set(Config.wave_posri,'XData',xr1,'YData',yr1);
-set(Config.wave_posrj,'XData',xr2,'YData',yr2);
+set(Config.wave_posdi,'XData',xd1,'YData',yd1);%'ZData',zd1); %%% IMPORTANT HERE: WILL NEED TO DETERMINE HOW 3D PATH TRAVERSAL IS PLOTTED
+set(Config.wave_posdj,'XData',xd2,'YData',yd2);%'ZData',zd2);
+set(Config.wave_posri,'XData',xr1,'YData',yr1);%'ZData',zr1);
+set(Config.wave_posrj,'XData',xr2,'YData',yr2);%'ZData',zr2);
 drawnow limitrate;
 % Update egms
 st=ConfigGUI.NumPaths*ConfigGUI.EachPath+ConfigGUI.NumNodes*ConfigGUI.EachNode;
 % Get the handle to the line that currently needs updating
 LineHandles={Config.aegm,Config.vegm};
 LineAxes={Config.AEGM,Config.VEGM};
+stoptime = evalin('base','stoptime');
+sTime = t;
 for i=1:2
     thisLineHandle = LineHandles{i};
     % Get the simulation time and the block data
-    sTime = t;
     data = u(st+i);
-    newXLim = [max(0,sTime-2000) max(2000,sTime)];
+    newXLim = [max(0,sTime-stoptime) max(stoptime,sTime)];
     set(LineAxes{i},'Xlim',newXLim);
     addpoints(thisLineHandle,sTime,data);
-    drawnow update;
+    drawnow limitrate;
 end
 % Update events
 st=st+2;
@@ -505,31 +537,61 @@ LineAxes={Config.GET,Config.P,Config.S,Config.R};
 for i=1:4
     thisLineHandle = LineHandles{i*2-1};
     % Get the simulation time and the block data
-    sTime = t;
     data1 = u(st+i*2-1);
     data2=-u(st+i*2);
-    newXLim = [max(0,sTime-2000) max(2000,sTime)];
+    newXLim = [max(0,sTime-stoptime) max(stoptime,sTime)];
     set(LineAxes{i},'Xlim',newXLim);
     addpoints(thisLineHandle,sTime,data1);
     thisLineHandle = LineHandles{i*2};
     addpoints(thisLineHandle,sTime,data2);
-    drawnow update;
+    drawnow limitrate;
 end
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Callback Function for click
 function button_down(hObject,eventdata) %#ok
+% IMPORTANT HERE: DETERMINE HOW A MOUSE CLICK IS INTERPRETED FOR A 3D GRAPH
 global ConfigGUI
+global nodes_name
+global probes_name
 cursorPoint = get(ConfigGUI.TOP_axe, 'CurrentPoint');
 curX = cursorPoint(1,1);
 curY = cursorPoint(1,2);
+xoffset = 5;
+yoffset = 5;
 xLimits = get(ConfigGUI.TOP_axe, 'xlim');
 yLimits = get(ConfigGUI.TOP_axe, 'ylim');
 if (curX > min(xLimits) && curX < max(xLimits) && curY > min(yLimits) && curY < max(yLimits))
     set(ConfigGUI.getp,'String',sprintf('(%.2f,%.2f)',curX,curY));
     set(ConfigGUI.setp,'XData',curX,'YData',curY);
-    drawnow update;
     
+    % Determine which is the closest Node/Probe
+    [~,dist1] = dsearchn([curX,curY],ConfigGUI.Node_pos);
+    [~,dist2] = dsearchn([curX,curY],[ConfigGUI.probe_pos.XData.',ConfigGUI.probe_pos.YData.']);
+    [m1,ind1]=min(dist1);
+    [m2,ind2]=min(dist2);
+    if m1 < m2
+        str = append('Node: ',int2str(ind1),' = ', nodes_name(ind1+1,1));
+        if strcmp('N',nodes_name(ind1+1,2))
+            str = [str,'Cell Type: N'];
+            back_color = [1 1 .3];
+        elseif strcmp('NM',nodes_name(ind1+1,2))
+            str = [str,'Cell Type: NM'];
+            back_color = [1 .8 .4];
+        elseif strcmp('M',nodes_name(ind1+1,2))
+            str = [str,'Cell Type: M'];
+            back_color = [1 .8 .8];
+        end
+    else
+        str = append('Probe: ',int2str(ind2),' = ', probes_name(ind2+1));
+        back_color = [.75 .75 .75];
+    end
+    % Display information for the node
+    delete(findobj('tag','mytooltip'))
+    text(curX+xoffset,curY+yoffset,str,...
+        'backgroundcolor',back_color,'tag','mytooltip','edgecolor',[0 0 0],...
+        'hittest','off')
+    drawnow update;
 else
     set(ConfigGUI.getp,'String',sprintf('(Outside)'));
 end

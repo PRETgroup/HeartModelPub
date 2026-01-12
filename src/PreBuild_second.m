@@ -28,7 +28,7 @@ datafile='N3Data_second.mat';
 [Node,Node_name,Node_pos,Path,Path_name,Probe,Probe_name,Probe_pos,cfgports]=PreCfgfcn_second(filexls,Noderange,Node_P_range,Pathrange, Path_P_range, Proberange,filename,datafile);
 
 %% Choose Nodes/Path library and build a heart model,which will be saved to the systempath.
-rootPath='C:\Users\wai484\OneDrive - The University of Auckland\Documents\HeartModelPub';% change it according to your directory structure
+rootPath=pwd;% may result in errors if running file from within 'src'
 path_var=[rootPath,filesep 'models']; % the path where the model will be saved
 library = [rootPath,filesep 'Lib' filesep 'Libs_second'];% the components library path
 node_n = 'Libs_second/Node_N_V6'; % The N type cell model library
