@@ -35,5 +35,5 @@ node_m = 'Node_M'; % The M type cell model library
 node_nm = 'Node_NM'; % The NM type cell model library
 path = 'Path'; % The path model library
 probe='Electrode'; % The EGM generation model library
-HeartModel='Heart_3D'; % The name of the heart model
-Buildmodel_3D_fcn(HeartModel,filename,node_n,node_m,node_nm,path,probe,path_var);
+HeartModel='Heart_3D_V1'; % The name of the heart model
+Buildmodel_3D_fcn_V1(HeartModel,filename,node_n,node_m,node_nm,path,probe,path_var);
